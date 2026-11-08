@@ -491,7 +491,7 @@ function viewExpenses(v) {
 
 /* ---------- WhatsApp import ---------- */
 function parseWhatsApp(text) {
-  text = text.replace(/[\u200e\u200f\u202a-\u202e]/g, '');
+  text = text.replace(new RegExp('[' + String.fromCharCode(0x200e, 0x200f, 0x202a) + '-' + String.fromCharCode(0x202e) + ']', 'g'), ''); // strip invisible direction marks
   const re = /^\[?(\d{1,2})[./](\d{1,2})[./](\d{2,4}),?\s+(\d{1,2}):(\d{2})(?::\d{2})?(?:\s?([AaPp])\.?[Mm]\.?)?\]?\s?(?:-\s)?([^:]{1,40}):\s([\s\S]*)$/;
   const lines = text.split(/\r?\n/), rows = lines.map(l => l.match(re));
   // Day/month or month/day? (Israeli exports are D/M, US-locale phones are M/D)
