@@ -1,7 +1,7 @@
 /**
  * Import of what was in the WhatsApp groups (exported 8.11.2026):
  *   "מזדקנים", "טיול זקנים למכתש" (Ramon crater, March 2022) and
- *   "טיול זקנים ל…" (Upper Galilee, April 2021), plus the photos of the "מזדקנים" export with media.
+ *   "טיול זקנים ל…" (Upper Galilee, April 2021), plus the full "מזדקנים" export with media (2020–2026).
  * In the Apps Script editor pick `importWhatsAppData` and press Run.
  * It renames the members and adds trails, trips, expenses and photos.
  * Anything that already exists (same name) is skipped, so running it again is safe.
@@ -36,6 +36,18 @@ WA_TRAILS.push(
   { key: 'galil', name: 'גליל עליון – חרבת חממה, נחל צבעון, נחל דישון, נחל אביב (יומיים)', region: 'גליל עליון', lengthKm: '20',
     notes: 'כיוון ההליכה צפונה.\nיום 1 (~7 ק״מ, בעיקר ירידה בשביל נוח): מתחילים בחרבת חממה ויורדים בנחל צבעון. לינה באזור עין פועה, סמוך למפגש עם נחל גוש חלב.\nיום 2 (~13 ק״מ, רובו ירידה): ממשיכים בנחל דישון ומסיימים בעלייה בנחל אביב.\n"מסלולי משפחות, לא קשים במיוחד." עד ~6 שעות הליכה ביום. 5 ליטר מים ליום. אפשר לקצר בקטעים שליד הכביש (העלייה ליראון רק מאריכה).' });
 
+WA_TRAILS.push(
+  { key: 'ramon_east', name: 'מכתש רמון ממזרח – חניון בארות, הר ארדון (3 ימים)', region: 'מכתש רמון',
+    notes: 'התוכנית של יוני: להחנות בחניון בארות, לצאת מזרחה, להקיף מצפון־מזרח ולרדת בהר ארדון. חצי יום בחמישי, שישי מלא, שבת עד הצהריים. 2 לילות בשטח.\n5–6 ליטר מים לאדם ליום; הצעה להטמנת מים אחת או שתיים.' },
+  { key: 'ramon_loop', name: 'סובב מכתש רמון – 3 ימים (12 / 15 / 13 ק״מ)', region: 'מכתש רמון', lengthKm: '40',
+    notes: 'אופציה ב׳ שנבחרה: יום 1 – 12 ק״מ, יום 2 – 15 ק״מ, יום 3 – 13 ק״מ. דורש הקפצה חזרה לרכב (450 ₪), הטמנת מים.\nאופציה א׳ שנדחתה: ראש מעלה לוץ והר עריף (13.5 / 19 / 16 ק״מ).' },
+  { key: 'amud', name: 'נחל עמוד', region: 'גליל עליון',
+    notes: 'טיול מים – יוני הציע: "אולי נחל עמוד יהיה מתאים".' },
+  { key: 'zaki', name: 'הזאכי – מסלול מים', region: 'צפון הכנרת',
+    notes: 'הליכה ושחייה בנחל, חלקים על חלוקים וסלעים וחלקים בשחייה. "המסלול במים ארוך יותר ויהיו פחות אנשים" – יוני.\nלהביא: סנדלים, בגד ים, מגבת, כובע, מים, חולצה יבשה. חלופה שנשקלה: עמק המעיינות (ניר דוד).' },
+  { key: 'bustan', name: 'עין הוד – נחל בוסתן – שביל ישראל', region: 'כרמל', lengthKm: '10.5', lat: '32.702213', lng: '34.983128',
+    notes: 'סיבוב בכרמל: מעין הוד לנחל בוסתן וחזרה דרך שביל ישראל, כ־10.5 ק״מ. אפשר להשאיר רכב אחד קרוב יותר אם המסלול מתארך.' });
+
 const WA_TRIPS = [
   { name: 'רמות מנשה', status: 'done', startDate: '2026-02-13', endDate: '2026-02-13', trail: 'menashe',
     location: 'עין השופט / גוערה', lat: '32.578968', lng: '35.123795',
@@ -52,6 +64,20 @@ const WA_TRIPS = [
   { name: 'גליל עליון – צבעון, דישון ואביב', status: 'done', startDate: '2021-04-23', endDate: '2021-04-24', trail: 'galil',
     location: 'חרבת חממה, 11:00', lat: '33.008911', lng: '35.393562',
     notes: 'הטיול הראשון של הקבוצה. משתתפים: בנג׳י, אביב, יוני, גיא (חבר של בנג׳י) וכהן.\nמסיימים בנחל אביב – לכבוד יום ההולדת של אביב.\nאביב אסף את בנג׳י ממגדים; ארבעה רכבים.\nקניות: 345 ₪ (בנג׳י), 50 ₪ מכל אחד בביט – "1+1=3".\nמיקומים שבנג׳י שלח ביום היציאה: 33.008911, 35.393562 ואחר כך "בואו לפה" – 33.082539, 35.459522.\n"תודה רבה לכולם. היה ממש מעולה"' },
+  { name: 'מכתש רמון ממזרח – דצמבר 2020', status: 'done', startDate: '2020-12-03', endDate: '2020-12-05', trail: 'ramon_east',
+    location: 'חניון בארות',
+    notes: 'הטיול הרב־יומי הראשון של שלושתנו. המסלול סוכם בשיחת ועידה ב־1/12.\nיוני עבר תאונת דרכים יום לפני, אז עשינו קניות יחד ב־3/12. רכב אחד (יוני אוסף).\nאוהלים: ליוני שני אוהלים של 2 ק״ג; התיק של בנג׳י ~15 ק״ג לפני אוכל ומים.\n"פעם ראשונה מאז גיל 22 שאני צועד עם ציוד על הגב ומקווה לקבוע את המועד הבא מיד בסוף הטיול הזה 😉" – בנג׳י' },
+  { name: 'סובב מכתש רמון – דצמבר 2022', status: 'done', startDate: '2022-12-01', endDate: '2022-12-03', trail: 'ramon_loop',
+    location: 'מכתש רמון (הקפצה חזרה לרכב)',
+    notes: 'נבחרה אופציה ב׳ – "סגור – נלך על אופציה ב׳" (יוני). הצטרפו גם בוטקה וגיא.\nהקפצה: 450 ₪. הטמנת מים. "יאללה. תכינו מעילי פוך" – יוני.\nהתאריכים (1–3/12) משוערים – לתקן אם צריך.' },
+  { name: 'נחל עמוד – יוני 2023', status: 'done', startDate: '2023-06-09', endDate: '2023-06-10', trail: 'amud',
+    notes: 'טיול מים של בנג׳י ויוני – אביב לא הגיע (יום הולדת וטיסה). שישי מלא וחזרה בשבת בבוקר.\n"אלמן פעם הבאה אין תירוצים!" – יוני. "וואו! נראה כיף." – אביב' },
+  { name: 'הזאכי – מאי 2024', status: 'done', startDate: '2024-05-10', endDate: '2024-05-10', trail: 'zaki',
+    location: 'צומת יהודיה, 09:00 (בנג׳י ואביב נפגשים ב־08:10 ביוקנעם)',
+    notes: 'הלו״ז של יוני: 09:00–10:00 ארוחת בוקר למרגלות הזאכי; 10:00–14:00 המסלול ורביצה במים; 14:00–16:00 המבורגר במושבוצ (מושב רמות).\nבנג׳י – פק״ל קפה, יוני – כוסות ונעלי צפרדעים לאביב. חמסין; הייתה התראה על זיהום ("אני לא מאמין להם" – יוני).' },
+  { name: 'עין הוד – נחל בוסתן', status: 'done', startDate: '2025-03-07', endDate: '2025-03-07', trail: 'bustan',
+    location: 'הכניסה לעין הוד, 08:15', lat: '32.702213', lng: '34.983128',
+    notes: 'כ־10.5 ק״מ בכרמל. "תביאו מטריות...." – יוני.\nסיום בארוחת ערב בדוניה רוסה בעין הוד (17:30).\nמיקומים מהדרך: 32.702213, 34.983128 (בבוקר) ו־32.701683, 34.996548 (בצהריים).\n"פעם שאלתי עץ – \'עץ, איך זה להיות עץ?\'" – אביב, באמצע הטיול' },
   { name: 'הטיול הבא – מרץ 2027', status: 'idea', startDate: '', endDate: '',
     notes: '"מצפה לטיול הבא במרץ 🙂" – צריך לנעוץ תאריך (ולא 31/2…).' },
 ];
@@ -84,6 +110,19 @@ const WA_PHOTOS = [
       return hm < '12:00' ? 'בנג׳י' : hm < '22:00' ? 'אביב' : 'יוני';
     },
     captions: { 2236: 'רשימת האוכל מהפעם הקודמת', 2264: 'ארוחת ערב', 2281: 'מספיק לנו? (שמן זית)' } },
+  // Older trips from the full "מזדקנים" export (2020–2025): picked by WhatsApp file number.
+  { trip: 'מכתש רמון ממזרח – דצמבר 2020', folderId: '1CRNyiU5WefBmc1AVwg4h7dVgcnYTErDE', only: [140, 141, 142, 157, 163, 171],
+    by: function (n) { return n >= 157 ? 'בנג׳י' : 'יוני'; }, captions: {} },
+  { trip: 'גליל עליון – צבעון, דישון ואביב', folderId: '1CRNyiU5WefBmc1AVwg4h7dVgcnYTErDE', only: [277, 278, 281],
+    by: function () { return 'יוני'; }, captions: { 277: 'אופציות למסלול', 278: 'אופציות למסלול', 281: 'אופציות למסלול' } },
+  { trip: 'מכתש רמון – 3 ימים', folderId: '1CRNyiU5WefBmc1AVwg4h7dVgcnYTErDE', only: [468, 558, 575],
+    by: function () { return 'יוני'; }, captions: {} },
+  { trip: 'סובב מכתש רמון – דצמבר 2022', folderId: '1CRNyiU5WefBmc1AVwg4h7dVgcnYTErDE', only: [776, 777, 778, 780, 781, 782, 824],
+    by: function () { return 'יוני'; }, captions: { 776: 'אופציות למסלול', 777: 'אופציות למסלול', 778: 'אופציות למסלול', 780: 'אופציות למסלול', 781: 'אופציות למסלול', 782: 'אופציות למסלול' } },
+  { trip: 'נחל עמוד – יוני 2023', folderId: '1CRNyiU5WefBmc1AVwg4h7dVgcnYTErDE', only: [886, 887],
+    by: function () { return 'יוני'; }, captions: {} },
+  { trip: 'עין הוד – נחל בוסתן', folderId: '1CRNyiU5WefBmc1AVwg4h7dVgcnYTErDE', only: [1451],
+    by: function () { return 'יוני'; }, captions: { 1451: 'מפת המסלול' } },
 ];
 
 function seedPhoto_(tripId, file, caption, by) {
@@ -125,11 +164,11 @@ function importWhatsAppData() {
     saveRecord('Expenses', { tripId: newTrips[e[0]], date: trip.endDate, description: e[1], amount: e[2], payer: e[3], splitWith: [], createdBy: WA_BY });
     added.expenses++;
   });
-  const withPhotos = {};
-  readTable_('Photos').forEach(function (r) { withPhotos[r.tripId] = true; });
+  const have = {};
+  readTable_('Photos').forEach(function (r) { have[r.fileId] = true; });
   WA_PHOTOS.forEach(function (p) {
     const tripId = newTrips[p.trip] || trips[p.trip];
-    if (!tripId || withPhotos[tripId]) return;
+    if (!tripId) return;
     if (p.folderId) {
       let files = [];
       try {
@@ -145,6 +184,8 @@ function importWhatsAppData() {
       } catch (err) { Logger.log('Could not open the photo folder for "' + p.trip + '": ' + err); return; }
       files.sort(function (a, b) { return a.getName() < b.getName() ? -1 : 1; });
       files.forEach(function (f) {
+        if (have[f.getId()]) return;
+        have[f.getId()] = true;
         const name = f.getName(), n = parseInt(name, 10);
         const m = name.match(/-(\d{4}-\d\d-\d\d)-(\d\d)-(\d\d)/) || [];
         seedPhoto_(tripId, f, p.captions[n], p.by(n, m[1], m[2] + ':' + m[3]));
