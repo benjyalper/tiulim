@@ -50,8 +50,18 @@
   .photo { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: #ddd; }
   .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .photo .cap { position: absolute; inset: auto 0 0 0; background: linear-gradient(transparent, rgba(0,0,0,.6)); color: #fff; font-size: 12px; padding: 14px 6px 4px; }
-  .photo .x { position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,.5); color: #fff; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; display: none; }
-  .photo:hover .x { display: block; }
+  .photo .x, .photo .mv { position: absolute; top: 4px; background: rgba(0,0,0,.55); color: #fff; border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; display: none; font-size: 13px; }
+  .photo .x { left: 4px; } .photo .mv { left: 34px; }
+  .photo:hover .x, .photo:hover .mv { display: block; }
+  @media (hover: none) { .photo .x, .photo .mv { display: block; } }
+  .photos.picking .photo { cursor: pointer; }
+  .photos.picking .photo img { transition: opacity .15s; }
+  .photo.sel { outline: 3px solid var(--accent); outline-offset: -3px; }
+  .photo.sel img { opacity: .6; }
+  .photo .tick { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid #fff; background: rgba(0,0,0,.25); color: #fff; text-align: center; line-height: 20px; font-size: 14px; }
+  .photo.sel .tick { background: var(--accent); }
+  .movebar { position: sticky; bottom: 0; z-index: 900; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; margin-top: 12px; box-shadow: 0 -2px 10px rgba(0,0,0,.08); }
+  .ph-sec { scroll-margin-top: 110px; }
   .vote { display: inline-flex; gap: 2px; } .vote button { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 2px 8px; cursor: pointer; font: inherit; }
   .vote button.on.yes { background: var(--accent); color: #fff; } .vote button.on.maybe { background: var(--gold); color: #fff; } .vote button.on.no { background: var(--warn); color: #fff; }
   .chip { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); margin: 2px; }
@@ -64,7 +74,7 @@
   input[type=checkbox] { width: auto; }
   textarea { min-height: 70px; }
   .actions { display: flex; gap: 8px; margin-top: 16px; }
-  #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 8px 16px; border-radius: 8px; display: none; z-index: 3000; }
+  #toast { position: fixed; bottom: 84px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 8px 16px; border-radius: 8px; display: none; z-index: 3000; }
   #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--bg); z-index: 4000; font-size: 18px; color: var(--muted); }
   .msg { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
   .msg .who { font-weight: 600; font-size: 13px; } .msg .txt { white-space: pre-wrap; word-break: break-word; margin: 4px 0; }
@@ -86,7 +96,7 @@
 
 <script>
 let D = { members: [], trips: [], trails: [], expenses: [], photos: [], dateOptions: [] };
-let tab = 'trips', currentTrip = null, waMessages = [], waFilter = 'useful';
+let tab = 'trips', currentTrip = null, waMessages = [], waFilter = 'useful', phSel = null, phTripSel = '';
 const STATUS = { idea: 'רעיון', planned: 'מתוכנן', done: 'בוצע' };
 const DIFF = { easy: 'קל', medium: 'בינוני', hard: 'קשה' };
 const TABS = [['trips','טיולים'],['schedule','לו״ז'],['trails','מסלולים'],['map','מפה'],['photos','תמונות'],['expenses','הוצאות'],['import','ייבוא מוואטסאפ']];
@@ -262,7 +272,7 @@ function render() {
   v.innerHTML = '';
   ({ trips: currentTrip ? viewTrip : viewTrips, schedule: viewSchedule, trails: viewTrails, map: viewMap, photos: viewPhotos, expenses: viewExpenses, import: viewImport })[tab](v);
 }
-function go(k) { tab = k; currentTrip = null; render(); window.scrollTo(0, 0); }
+function go(k) { tab = k; currentTrip = null; phSel = null; render(); window.scrollTo(0, 0); }
 
 function tripCard(t) {
   const trail = byId(D.trails, t.trailId);
@@ -282,7 +292,7 @@ function viewTrips(v) {
     ${up.length ? `<div class="section"><h3>בקרוב ורעיונות</h3><div class="grid">${up.map(tripCard).join('')}</div></div>` : ''}
     ${past.length ? `<div class="section"><h3>טיולים שעשינו</h3><div class="grid">${past.map(tripCard).join('')}</div></div>` : ''}`;
 }
-function openTrip(id) { currentTrip = id; tab = 'trips'; render(); window.scrollTo(0, 0); }
+function openTrip(id) { currentTrip = id; tab = 'trips'; phSel = null; render(); window.scrollTo(0, 0); }
 
 function calLink(t) {
   if (!t.startDate) return '';
@@ -322,8 +332,8 @@ function viewTrip(v) {
     </div>
     <div class="section"><div class="row"><h3>💰 הוצאות</h3><span class="spacer"></span><button class="btn ghost small" onclick="addExpense({tripId:'${t.id}', date:'${t.startDate || today()}'})">+ הוצאה</button></div>
       ${expenseTable(ex)}${ex.length ? '<div style="margin-top:10px">' + balanceHtml(ex) + '</div>' : ''}</div>
-    <div class="section"><div class="row"><h3>📷 תמונות</h3><span class="spacer"></span><label class="btn ghost small" style="margin:0;color:var(--accent)">+ העלאה<input type="file" accept="image/\*" multiple hidden onchange="uploadPhotos('${t.id}', this.files)"></label></div>
-      ${photoGrid(ph)}</div>`;
+    <div class="section"><div class="row"><h3>📷 תמונות</h3><span class="spacer"></span>${ph.length && !phSel ? '<button type="button" class="btn ghost small" onclick="startPicking()">בחירה והעברה</button>' : ''}<label class="btn ghost small" style="margin:0;color:var(--accent)">+ העלאה<input type="file" accept="image/\*" multiple hidden onchange="uploadPhotos('${t.id}', this.files)"></label></div>
+      ${photoGrid(ph)}${moveBar()}</div>`;
   if (document.getElementById('map')) drawMap([t], trail ? [trail] : [], 12);
 }
 function addDateOption(tripId) {
@@ -429,9 +439,53 @@ function viewMap(v) {
 }
 function photoGrid(ph) {
   if (!ph.length) return '<div class="empty">אין תמונות עדיין</div>';
+  const cap = p => p.caption || p.takenBy ? `<div class="cap">${esc(p.caption)}${p.takenBy ? ' · ' + esc(p.takenBy) : ''}</div>` : '';
+  if (phSel) return `<div class="photos picking">${ph.map(p => `<div class="photo ${phSel.has(p.id) ? 'sel' : ''}" onclick="togglePick('${p.id}')">
+    <img loading="lazy" src="${thumb(p.fileId)}" alt="">${cap(p)}<span class="tick">${phSel.has(p.id) ? '✓' : ''}</span></div>`).join('')}</div>`;
   return `<div class="photos">${ph.map(p => `<div class="photo"><a href="https:\/\/drive.google.com/file/d/${esc(p.fileId)}/view"><img loading="lazy" src="${thumb(p.fileId)}" alt=""></a>
-    ${p.caption || p.takenBy ? `<div class="cap">${esc(p.caption)}${p.takenBy ? ' · ' + esc(p.takenBy) : ''}</div>` : ''}
-    <button type="button" class="x" title="מחיקה" onclick="delPhoto('${p.id}')">✕</button></div>`).join('')}</div>`;
+    ${cap(p)}
+    <button type="button" class="x" title="מחיקה" onclick="delPhoto('${p.id}')">✕</button>
+    <button type="button" class="mv" title="העברה לטיול אחר" onclick="moveDialog(['${p.id}'])">⇄</button></div>`).join('')}</div>`;
+}
+function tripOptions(selected, exclude) {
+  return D.trips.slice().sort((a, z) => (z.startDate || '').localeCompare(a.startDate || ''))
+    .filter(t => t.id !== exclude)
+    .map(t => `<option value="${t.id}" ${t.id === selected ? 'selected' : ''}>${esc(t.name)}${t.startDate ? ' – ' + fmtDate(t.startDate) : ''}</option>`).join('');
+}
+function startPicking() { phSel = new Set(); render(); }
+function stopPicking() { phSel = null; render(); }
+function togglePick(id) {
+  if (phSel.has(id)) phSel.delete(id); else phSel.add(id);
+  const y = window.scrollY; render(); window.scrollTo(0, y);
+}
+function moveBar() {
+  if (!phSel) return '';
+  return `<div class="movebar row"><b>${phSel.size} נבחרו</b><span class="spacer"></span>
+    <button type="button" class="btn small" ${phSel.size ? '' : 'disabled'} onclick="moveDialog([...phSel])">⇄ העברה לטיול אחר</button>
+    <button type="button" class="btn ghost small" onclick="stopPicking()">סיום</button></div>`;
+}
+function moveDialog(ids) {
+  if (!ids.length) return;
+  const from = byId(D.photos, ids[0])?.tripId;
+  const f = document.getElementById('dlgForm');
+  f.innerHTML = `<h3>העברת ${ids.length > 1 ? ids.length + ' תמונות' : 'תמונה'} לטיול אחר</h3>
+    <label for="mvTo">לאיזה טיול?</label><select id="mvTo">${tripOptions('', ids.every(id => byId(D.photos, id)?.tripId === from) ? from : '')}</select>
+    <div class="actions"><button class="btn" value="save">העברה</button><button class="btn ghost" value="cancel" formnovalidate>ביטול</button></div>`;
+  const dlg = document.getElementById('dlg'); dlg.showModal();
+  dlg.onclose = async () => {
+    if (dlg.returnValue !== 'save') return;
+    const to = document.getElementById('mvTo').value, name = byId(D.trips, to)?.name || '';
+    const y = window.scrollY;
+    await act(api('movePhotos', ids, to), `${ids.length > 1 ? 'הועברו ' + ids.length + ' תמונות' : 'התמונה הועברה'} ל״${name}״ ✓`);
+    if (phSel) { phSel = new Set(); render(); }
+    window.scrollTo(0, y);
+  };
+}
+function phJump(id) {
+  phTripSel = id;
+  const el = document.getElementById('ph-' + id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  else toast('לטיול הזה עוד אין תמונות – אפשר להעלות אליו עכשיו');
 }
 const delPhoto = id => confirm('למחוק את התמונה?') && act(api('deleteRecord', 'Photos', id), 'נמחקה');
 function resize(file, max = 1800) {
@@ -451,6 +505,7 @@ async function fileHash(f) {
 }
 async function uploadPhotos(tripId, files) {
   files = [...files]; if (!files.length) return;
+  phTripSel = tripId;
   if (!tripId) return toast('בחרו טיול קודם');
   const caption = files.length === 1 ? (prompt('כיתוב לתמונה (לא חובה):') || '') : '';
   let ok = 0; const dups = [];
@@ -471,12 +526,16 @@ async function uploadPhotos(tripId, files) {
 }
 function viewPhotos(v) {
   const trips = D.trips.slice().sort((a, z) => (z.startDate || '').localeCompare(a.startDate || ''));
+  if (!byId(D.trips, phTripSel)) phTripSel = trips.length ? trips[0].id : '';
   v.innerHTML = `<div class="toolbar"><h2>תמונות</h2>
-      ${trips.length ? `<select id="phTrip" style="width:auto">${trips.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('')}</select>
-      <label class="btn" style="margin:0;color:#fff">+ העלאה<input type="file" accept="image/\*" multiple hidden onchange="uploadPhotos(document.getElementById('phTrip').value, this.files)"></label>` : ''}
+      ${trips.length ? `<select id="phTrip" style="width:auto" onchange="phJump(this.value)" title="קפיצה לטיול / העלאה אליו">${tripOptions(phTripSel)}</select>
+      <label class="btn" style="margin:0;color:#fff">+ העלאה<input type="file" accept="image/\*" multiple hidden onchange="uploadPhotos(document.getElementById('phTrip').value, this.files)"></label>
+      ${D.photos.length ? (phSel ? '' : '<button type="button" class="btn ghost" onclick="startPicking()">בחירה והעברה</button>') : ''}` : ''}
       ${D.photosFolderUrl ? `<a class="btn ghost" href="${D.photosFolderUrl}">התיקייה בדרייב</a>` : ''}</div>
+    ${phSel ? '<div class="meta">לחצו על תמונות כדי לבחור אותן, ואז ״העברה לטיול אחר״.</div>' : ''}
     ${!trips.length ? '<div class="empty">צרו טיול קודם, ואז תוכלו להעלות אליו תמונות.</div>' : ''}
-    ${trips.map(t => { const ph = D.photos.filter(p => p.tripId === t.id); return ph.length ? `<div class="section"><h3><a href="#" target="_self" onclick="openTrip('${t.id}');return false">${esc(t.name)}</a> <span class="meta">${dateRange(t)} · ${ph.length}</span></h3>${photoGrid(ph)}</div>` : ''; }).join('')}`;
+    ${trips.map(t => { const ph = D.photos.filter(p => p.tripId === t.id); return ph.length ? `<div class="section ph-sec" id="ph-${t.id}"><h3><a href="#" target="_self" onclick="openTrip('${t.id}');return false">${esc(t.name)}</a> <span class="meta">${dateRange(t)} · ${ph.length}</span></h3>${photoGrid(ph)}</div>` : ''; }).join('')}
+    ${moveBar()}`;
 }
 function viewExpenses(v) {
   const f = store('expTrip') || '';

@@ -177,6 +177,19 @@ function deleteRecord(table, id) {
   });
 }
 
+/** Move photos (by id) to another trip. Returns how many were moved. */
+function movePhotos(ids, tripId) {
+  if (!readTable_('Trips').some(function (t) { return t.id === tripId; })) throw new Error('Trip not found');
+  return withLock_(function () {
+    const sh = sheet_('Photos'), vals = sh.getDataRange().getValues(), cT = vals[0].indexOf('tripId');
+    let n = 0;
+    for (let i = 1; i < vals.length; i++) {
+      if (ids.indexOf(String(vals[i][0])) >= 0) { sh.getRange(i + 1, cT + 1).setValue(tripId); n++; }
+    }
+    return n;
+  });
+}
+
 function vote(optionId, member, value) {
   return withLock_(function () {
     const sh = sheet_('DateOptions');
