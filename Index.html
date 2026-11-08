@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<base target="_blank">
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root {
+    --bg: #f4f2ec; --card: #ffffff; --ink: #1f2a24; --muted: #6b766f; --line: #e1ddd2;
+    --accent: #2f6b4f; --accent-soft: #e3efe8; --warn: #b5562f; --warn-soft: #f7e6dd; --gold: #a07a1c;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, "Segoe UI", Arial, sans-serif; }
+  header { position: sticky; top: 0; z-index: 1000; background: var(--accent); color: #fff; padding: 10px 16px; display: flex; align-items: center; gap: 10px; }
+  header h1 { font-size: 18px; margin: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  header select { width: auto; max-width: 45%; background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.4); border-radius: 8px; padding: 4px 8px; font: inherit; }
+  header select option { color: var(--ink); }
+  header button { background: none; border: none; color: #fff; font-size: 20px; cursor: pointer; }
+  nav { display: flex; gap: 4px; overflow-x: auto; padding: 8px 12px; background: var(--card); border-bottom: 1px solid var(--line); position: sticky; top: 46px; z-index: 999; }
+  nav button { flex: none; border: none; background: none; padding: 8px 12px; border-radius: 999px; font: inherit; color: var(--muted); cursor: pointer; white-space: nowrap; }
+  nav button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  main { max-width: 900px; margin: 0 auto; padding: 16px; padding-bottom: 80px; }
+  .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .toolbar h2 { margin: 0; font-size: 20px; flex: 1; }
+  .btn { border: 1px solid var(--accent); background: var(--accent); color: #fff; border-radius: 8px; padding: 7px 14px; font: inherit; cursor: pointer; }
+  .btn.ghost { background: transparent; color: var(--accent); }
+  .btn.danger { background: transparent; color: var(--warn); border-color: var(--warn); }
+  .btn.small { padding: 3px 10px; font-size: 13px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
+  .card.click { cursor: pointer; } .card.click:hover { border-color: var(--accent); }
+  .card h3 { margin: 0 0 4px; font-size: 16px; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .badge { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+  .badge.idea { background: #eee8d6; color: var(--gold); } .badge.done { background: #e4e4e4; color: #555; }
+  .section { margin-top: 20px; } .section h3 { margin: 0 0 8px; font-size: 16px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .spacer { flex: 1; }
+  table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: var(--radius); overflow: hidden; }
+  th, td { text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  th { background: #faf9f5; color: var(--muted); font-weight: 600; }
+  .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .pos { color: var(--accent); } .neg { color: var(--warn); }
+  .empty { color: var(--muted); text-align: center; padding: 30px 10px; }
+  #map { height: 65vh; border-radius: var(--radius); border: 1px solid var(--line); }
+  .minimap { height: 220px; border-radius: 8px; border: 1px solid var(--line); margin-top: 6px; }
+  .photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+  .photo { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: #ddd; }
+  .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .photo .cap { position: absolute; inset: auto 0 0 0; background: linear-gradient(transparent, rgba(0,0,0,.6)); color: #fff; font-size: 12px; padding: 14px 6px 4px; }
+  .photo .x { position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,.5); color: #fff; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; display: none; }
+  .photo:hover .x { display: block; }
+  .vote { display: inline-flex; gap: 2px; } .vote button { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 2px 8px; cursor: pointer; font: inherit; }
+  .vote button.on.yes { background: var(--accent); color: #fff; } .vote button.on.maybe { background: var(--gold); color: #fff; } .vote button.on.no { background: var(--warn); color: #fff; }
+  .chip { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); margin: 2px; }
+  .chip.yes { border-color: var(--accent); color: var(--accent); } .chip.no { border-color: var(--warn); color: var(--warn); } .chip.maybe { border-color: var(--gold); color: var(--gold); }
+  dialog { border: none; border-radius: var(--radius); padding: 0; width: min(520px, 94vw); max-height: 90vh; }
+  dialog::backdrop { background: rgba(0,0,0,.4); }
+  dialog form { padding: 18px; } dialog h3 { margin: 0 0 12px; }
+  label { display: block; margin: 10px 0 2px; font-size: 13px; color: var(--muted); }
+  input, select, textarea { width: 100%; font: inherit; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); }
+  input[type=checkbox] { width: auto; }
+  textarea { min-height: 70px; }
+  .actions { display: flex; gap: 8px; margin-top: 16px; }
+  #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 8px 16px; border-radius: 8px; display: none; z-index: 3000; }
+  #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--bg); z-index: 4000; font-size: 18px; color: var(--muted); }
+  .msg { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+  .msg .who { font-weight: 600; font-size: 13px; } .msg .txt { white-space: pre-wrap; word-break: break-word; margin: 4px 0; }
+  a { color: var(--accent); }
+  @media (max-width: 600px) { main { padding: 12px; } th, td { padding: 6px; font-size: 13px; } }
+</style>
+</head>
+<body>
+<div id="loading">טוען…</div>
+<header>
+  <h1>🥾 הטיולים שלנו</h1>
+  <select id="me" title="מי אני"></select>
+  <button id="settingsBtn" title="הגדרות">⚙︎</button>
+</header>
+<nav id="tabs"></nav>
+<main id="view"></main>
+<dialog id="dlg"><form id="dlgForm" method="dialog"></form></dialog>
+<div id="toast"></div>
+
+<script>
+/* ================= State & API ================= */
+let D = { members: [], trips: [], trails: [], expenses: [], photos: [], dateOptions: [] };
+let tab = 'trips', currentTrip = null, waMessages = [], waFilter = 'useful';
+const STATUS = { idea: 'רעיון', planned: 'מתוכנן', done: 'בוצע' };
+const DIFF = { easy: 'קל', medium: 'בינוני', hard: 'קשה' };
+const TABS = [['trips','טיולים'],['schedule','לו״ז'],['trails','מסלולים'],['map','מפה'],['photos','תמונות'],['expenses','הוצאות'],['import','ייבוא מוואטסאפ']];
+
+function api(fn, ...args) {
+  return new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...args));
+}
+async function reload() { D = await api('getData'); render(); }
+async function act(promise, okMsg) {
+  try { const r = await promise; if (okMsg) toast(okMsg); await reload(); return r; }
+  catch (e) { toast('שגיאה: ' + (e.message || e)); throw e; }
+}
+function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+function me() { return document.getElementById('me').value; }
+
+/* ================= Utils ================= */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const byId = (list, id) => list.find(x => x.id === id);
+const money = n => '₪' + (Math.round(n * 100) / 100).toLocaleString('he-IL');
+const list = v => { if (Array.isArray(v)) return v; try { const a = JSON.parse(v || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } };
+const obj = v => { try { return JSON.parse(v || '{}') || {}; } catch (e) { return {}; } };
+function fmtDate(d) { if (!d) return ''; const [y, m, dd] = d.split('-'); return dd ? `${+dd}.${+m}.${y}` : d; }
+function dateRange(t) { return t.startDate ? fmtDate(t.startDate) + (t.endDate && t.endDate !== t.startDate ? ' – ' + fmtDate(t.endDate) : '') : 'ללא תאריך'; }
+function today() { return new Date().toISOString().slice(0, 10); }
+function toast(m) { const t = document.getElementById('toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 2600); }
+function thumb(id, w = 400) { return `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${w}`; }
+
+function parseCoords(s) {
+  s = decodeURIComponent(String(s || ''));
+  const pats = [/^\s*(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)\s*$/, /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/, /@(-?\d+\.\d+),(-?\d+\.\d+)/,
+    /[?&](?:q|ll|query|destination|center)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/, /\/map\/\d+\/(-?\d+\.\d+)\/(-?\d+\.\d+)/, /\/(-?\d{1,2}\.\d{3,}),\+?(-?\d{1,3}\.\d{3,})/];
+  for (const p of pats) { const m = s.match(p); if (m) return [+m[1], +m[2]]; }
+  return null;
+}
+async function coordsFrom(s) {
+  let c = parseCoords(s);
+  if (!c && /^https?:\/\//.test(s.trim())) { try { c = parseCoords(await api('resolveLink', s.trim())); } catch (e) {} }
+  return c;
+}
+
+/* ================= Money ================= */
+function balances(expenses) {
+  const b = {}; D.members.forEach(m => b[m] = 0);
+  expenses.forEach(e => {
+    const amt = parseFloat(e.amount) || 0; if (!amt) return;
+    let among = list(e.splitWith).filter(m => m); if (!among.length) among = D.members;
+    b[e.payer] = (b[e.payer] || 0) + amt;
+    among.forEach(m => b[m] = (b[m] || 0) - amt / among.length);
+  });
+  return b;
+}
+function settle(b) {
+  const cred = [], debt = [], out = [];
+  Object.entries(b).forEach(([m, v]) => { if (v > 0.01) cred.push([m, v]); else if (v < -0.01) debt.push([m, -v]); });
+  cred.sort((a, z) => z[1] - a[1]); debt.sort((a, z) => z[1] - a[1]);
+  let i = 0, j = 0;
+  while (i < debt.length && j < cred.length) {
+    const x = Math.min(debt[i][1], cred[j][1]);
+    out.push({ from: debt[i][0], to: cred[j][0], amount: x });
+    debt[i][1] -= x; cred[j][1] -= x;
+    if (debt[i][1] < 0.01) i++; if (cred[j][1] < 0.01) j++;
+  }
+  return out;
+}
+function balanceHtml(expenses) {
+  const b = balances(expenses), s = settle(b);
+  const paid = {}; expenses.forEach(e => paid[e.payer] = (paid[e.payer] || 0) + (parseFloat(e.amount) || 0));
+  const total = expenses.reduce((a, e) => a + (parseFloat(e.amount) || 0), 0);
+  return `<table><tr><th>חבר</th><th>שילם</th><th>יתרה</th></tr>
+    ${Object.keys(b).map(m => `<tr><td>${esc(m)}</td><td class="num">${money(paid[m] || 0)}</td>
+      <td class="num ${b[m] > 0.01 ? 'pos' : b[m] < -0.01 ? 'neg' : ''}">${b[m] > 0.01 ? 'מקבל ' : b[m] < -0.01 ? 'חייב ' : ''}${money(Math.abs(b[m]))}</td></tr>`).join('')}
+    <tr><th>סה״כ</th><th class="num">${money(total)}</th><th></th></tr></table>
+    <div style="margin-top:8px">${s.length ? s.map(t => `<div>💸 <b>${esc(t.from)}</b> מעביר ל<b>${esc(t.to)}</b> <span class="num">${money(t.amount)}</span></div>`).join('') : '<div class="meta">כולם מאוזנים 👌</div>'}</div>`;
+}
+function expenseTable(expenses, showTrip) {
+  if (!expenses.length) return '<div class="empty">אין הוצאות עדיין</div>';
+  return `<table><tr><th>תאריך</th>${showTrip ? '<th>טיול</th>' : ''}<th>תיאור</th><th>שילם</th><th>סכום</th><th></th></tr>
+    ${expenses.slice().sort((a, z) => (z.date || '').localeCompare(a.date || '')).map(e => `<tr>
+      <td class="num">${fmtDate(e.date)}</td>${showTrip ? `<td>${esc(byId(D.trips, e.tripId)?.name || '—')}</td>` : ''}
+      <td>${esc(e.description)}${list(e.splitWith).length && list(e.splitWith).length < D.members.length ? `<div class="meta">בין: ${list(e.splitWith).map(esc).join(', ')}</div>` : ''}</td>
+      <td>${esc(e.payer)}</td><td class="num">${money(parseFloat(e.amount) || 0)}</td>
+      <td><button type="button" class="btn ghost small" onclick="editExpense('${e.id}')">✎</button></td></tr>`).join('')}</table>`;
+}
+
+/* ================= Forms ================= */
+const FIELDS = {
+  Trips: [
+    { k: 'name', l: 'שם הטיול', req: 1 },
+    { k: 'status', l: 'סטטוס', type: 'select', opts: () => Object.entries(STATUS) },
+    { k: 'startDate', l: 'תאריך התחלה', type: 'date' },
+    { k: 'endDate', l: 'תאריך סיום', type: 'date' },
+    { k: 'trailId', l: 'מסלול', type: 'select', opts: () => [['', '—'], ...D.trails.map(t => [t.id, t.name])] },
+    { k: 'location', l: 'מקום / נקודת מפגש' },
+    { k: 'coords', l: 'מיקום במפה (קישור גוגל מפות / קואורדינטות / לחיצה על המפה)', type: 'coords' },
+    { k: 'notes', l: 'הערות (ציוד, תחבורה, לינה…)', type: 'textarea' },
+  ],
+  Trails: [
+    { k: 'name', l: 'שם המסלול', req: 1 },
+    { k: 'region', l: 'אזור' },
+    { k: 'lengthKm', l: 'אורך (ק״מ)', type: 'number' },
+    { k: 'durationHrs', l: 'משך (שעות)', type: 'number' },
+    { k: 'difficulty', l: 'רמת קושי', type: 'select', opts: () => [['', '—'], ...Object.entries(DIFF)] },
+    { k: 'mapUrl', l: 'קישור למפה / למסלול (עמוד ענן, מפות ישראל, ויקילוק…)' },
+    { k: 'coords', l: 'נקודת התחלה (קישור / קואורדינטות / לחיצה על המפה)', type: 'coords' },
+    { k: 'notes', l: 'הערות', type: 'textarea' },
+  ],
+  Expenses: [
+    { k: 'tripId', l: 'טיול', type: 'select', opts: () => [['', '— כללי —'], ...D.trips.map(t => [t.id, t.name])] },
+    { k: 'description', l: 'על מה', req: 1 },
+    { k: 'amount', l: 'סכום (₪)', type: 'number', req: 1 },
+    { k: 'payer', l: 'מי שילם', type: 'select', opts: () => D.members.map(m => [m, m]) },
+    { k: 'splitWith', l: 'מתחלק בין', type: 'members' },
+    { k: 'date', l: 'תאריך', type: 'date' },
+  ],
+};
+
+let miniMap = null;
+function openForm(table, rec, title, onSaved) {
+  rec = { ...rec };
+  const f = document.getElementById('dlgForm');
+  f.innerHTML = `<h3>${esc(title)}</h3>` + FIELDS[table].map(fd => {
+    const v = rec[fd.k] ?? '';
+    const id = 'f_' + fd.k;
+    if (fd.type === 'select') return `<label for="${id}">${fd.l}</label><select id="${id}">${fd.opts().map(([val, txt]) => `<option value="${esc(val)}" ${String(val) === String(v) ? 'selected' : ''}>${esc(txt)}</option>`).join('')}</select>`;
+    if (fd.type === 'textarea') return `<label for="${id}">${fd.l}</label><textarea id="${id}">${esc(v)}</textarea>`;
+    if (fd.type === 'members') { const sel = list(v).length ? list(v) : D.members;
+      return `<label>${fd.l}</label><div class="row">${D.members.map(m => `<label style="margin:0;color:var(--ink)"><input type="checkbox" name="split" value="${esc(m)}" ${sel.includes(m) ? 'checked' : ''}> ${esc(m)}</label>`).join('')}</div>`; }
+    if (fd.type === 'coords') { const c = rec.lat && rec.lng ? `${rec.lat}, ${rec.lng}` : '';
+      return `<label for="${id}">${fd.l}</label><input id="${id}" value="${esc(c)}" placeholder="https://maps.app.goo.gl/… או 31.77, 35.21"><div id="minimap" class="minimap"></div>`; }
+    return `<label for="${id}">${fd.l}</label><input id="${id}" type="${fd.type || 'text'}" ${fd.type === 'number' ? 'step="any"' : ''} value="${esc(v)}" ${fd.req ? 'required' : ''}>`;
+  }).join('') + `<div class="actions"><button class="btn" value="save">שמירה</button><button class="btn ghost" value="cancel" formnovalidate>ביטול</button><span class="spacer"></span>
+    ${rec.id ? '<button class="btn danger" value="delete" formnovalidate>מחיקה</button>' : ''}</div>`;
+  const dlg = document.getElementById('dlg');
+  dlg.showModal();
+  if (document.getElementById('minimap')) setupMiniMap(rec);
+  dlg.onclose = async () => {
+    if (miniMap) { miniMap.remove(); miniMap = null; }
+    const how = dlg.returnValue;
+    if (how === 'delete') {
+      if (!confirm('למחוק?' + (table === 'Trips' ? ' (כולל ההוצאות, התמונות וההצבעות של הטיול)' : ''))) return;
+      await act(api('deleteRecord', table, rec.id), 'נמחק'); if (table === 'Trips') { currentTrip = null; render(); } return;
+    }
+    if (how !== 'save') return;
+    const out = rec.id ? { id: rec.id } : { createdBy: me() };
+    for (const fd of FIELDS[table]) {
+      if (fd.type === 'members') out.splitWith = [...f.querySelectorAll('input[name=split]:checked')].map(i => i.value);
+      else if (fd.type === 'coords') {
+        const raw = document.getElementById('f_coords').value.trim();
+        if (!raw) { out.lat = ''; out.lng = ''; continue; }
+        const c = await coordsFrom(raw);
+        if (c) { out.lat = c[0].toFixed(6); out.lng = c[1].toFixed(6); }
+        else { toast('לא הצלחתי לזהות מיקום מהקישור — נשמר בלי נקודה במפה'); if (table === 'Trails' && !out.mapUrl) out.mapUrl = raw; }
+      } else out[fd.k] = document.getElementById('f_' + fd.k).value;
+    }
+    const saved = await act(api('saveRecord', table, out), 'נשמר ✓');
+    if (onSaved) onSaved(saved);
+  };
+}
+function setupMiniMap(rec) {
+  const inp = document.getElementById('f_coords');
+  miniMap = L.map('minimap').setView(rec.lat ? [+rec.lat, +rec.lng] : [31.5, 34.9], rec.lat ? 12 : 7);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(miniMap);
+  let mk = rec.lat ? L.marker([+rec.lat, +rec.lng]).addTo(miniMap) : null;
+  const place = ll => { if (mk) mk.setLatLng(ll); else mk = L.marker(ll).addTo(miniMap); };
+  miniMap.on('click', e => { place(e.latlng); inp.value = e.latlng.lat.toFixed(6) + ', ' + e.latlng.lng.toFixed(6); });
+  inp.addEventListener('change', async () => { const c = await coordsFrom(inp.value); if (c) { place(c); miniMap.setView(c, 13); } });
+  setTimeout(() => miniMap && miniMap.invalidateSize(), 100);
+}
+const addTrip = (pre = {}) => openForm('Trips', { status: 'idea', ...pre }, 'טיול חדש', t => { currentTrip = t.id; tab = 'trips'; render(); });
+const editTrip = id => openForm('Trips', byId(D.trips, id), 'עריכת טיול');
+const addTrail = (pre = {}) => openForm('Trails', pre, 'מסלול חדש');
+const editTrail = id => openForm('Trails', byId(D.trails, id), 'עריכת מסלול');
+const addExpense = (pre = {}) => openForm('Expenses', { payer: me(), date: today(), ...pre }, 'הוצאה חדשה');
+const editExpense = id => openForm('Expenses', byId(D.expenses, id), 'עריכת הוצאה');
+
+/* ================= Views ================= */
+function render() {
+  document.getElementById('tabs').innerHTML = TABS.map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" onclick="go('${k}')">${l}</button>`).join('');
+  const v = document.getElementById('view');
+  if (window._map) { window._map.remove(); window._map = null; }
+  v.innerHTML = '';
+  ({ trips: currentTrip ? viewTrip : viewTrips, schedule: viewSchedule, trails: viewTrails, map: viewMap, photos: viewPhotos, expenses: viewExpenses, import: viewImport })[tab](v);
+}
+function go(k) { tab = k; currentTrip = null; render(); window.scrollTo(0, 0); }
+
+function tripCard(t) {
+  const trail = byId(D.trails, t.trailId);
+  const spent = D.expenses.filter(e => e.tripId === t.id).reduce((a, e) => a + (parseFloat(e.amount) || 0), 0);
+  const nPh = D.photos.filter(p => p.tripId === t.id).length;
+  return `<div class="card click" onclick="openTrip('${t.id}')"><div class="row"><h3>${esc(t.name)}</h3><span class="spacer"></span><span class="badge ${t.status}">${STATUS[t.status] || ''}</span></div>
+    <div class="meta">📅 ${dateRange(t)}${t.location ? ' · 📍 ' + esc(t.location) : ''}</div>
+    ${trail ? `<div class="meta">🥾 ${esc(trail.name)}${trail.lengthKm ? ` · ${esc(trail.lengthKm)} ק״מ` : ''}</div>` : ''}
+    <div class="meta">${spent ? '💰 ' + money(spent) + ' · ' : ''}${nPh ? '📷 ' + nPh : ''}</div></div>`;
+}
+function viewTrips(v) {
+  const t0 = today();
+  const up = D.trips.filter(t => t.status !== 'done' && (!t.startDate || (t.endDate || t.startDate) >= t0)).sort((a, z) => (a.startDate || '9').localeCompare(z.startDate || '9'));
+  const past = D.trips.filter(t => !up.includes(t)).sort((a, z) => (z.startDate || '').localeCompare(a.startDate || ''));
+  v.innerHTML = `<div class="toolbar"><h2>טיולים</h2><button class="btn" onclick="addTrip()">+ טיול חדש</button></div>
+    ${!D.trips.length ? '<div class="empty">עוד אין טיולים. התחילו ב״טיול חדש״ או ייבאו מהוואטסאפ.</div>' : ''}
+    ${up.length ? `<div class="section"><h3>בקרוב ורעיונות</h3><div class="grid">${up.map(tripCard).join('')}</div></div>` : ''}
+    ${past.length ? `<div class="section"><h3>טיולים שעשינו</h3><div class="grid">${past.map(tripCard).join('')}</div></div>` : ''}`;
+}
+function openTrip(id) { currentTrip = id; tab = 'trips'; render(); window.scrollTo(0, 0); }
+
+function calLink(t) {
+  if (!t.startDate) return '';
+  const end = new Date((t.endDate || t.startDate) + 'T12:00:00'); end.setDate(end.getDate() + 1);
+  const d = s => s.replace(/-/g, '');
+  const p = new URLSearchParams({ action: 'TEMPLATE', text: t.name, dates: d(t.startDate) + '/' + d(end.toISOString().slice(0, 10)), location: t.location || '', details: t.notes || '' });
+  return `https://calendar.google.com/calendar/render?${p}`;
+}
+function voteSummary(o) {
+  const v = obj(o.votes);
+  return D.members.map(m => `<span class="chip ${v[m] || ''}">${esc(m)} ${{ yes: '✓', maybe: '?', no: '✗' }[v[m]] || '·'}</span>`).join('');
+}
+function viewTrip(v) {
+  const t = byId(D.trips, currentTrip); if (!t) { currentTrip = null; return viewTrips(v); }
+  const trail = byId(D.trails, t.trailId);
+  const ex = D.expenses.filter(e => e.tripId === t.id);
+  const ph = D.photos.filter(p => p.tripId === t.id);
+  const opts = D.dateOptions.filter(o => o.tripId === t.id).sort((a, z) => a.date.localeCompare(z.date));
+  const mine = me();
+  v.innerHTML = `<div class="toolbar"><button class="btn ghost small" onclick="go('trips')">→ כל הטיולים</button></div>
+    <div class="card"><div class="row"><h2 style="margin:0">${esc(t.name)}</h2><span class="badge ${t.status}">${STATUS[t.status] || ''}</span><span class="spacer"></span>
+      <button class="btn ghost small" onclick="editTrip('${t.id}')">✎ עריכה</button></div>
+      <div class="meta" style="margin-top:6px">📅 ${dateRange(t)} ${t.startDate ? `· <a href="${calLink(t)}">הוספה ליומן גוגל</a>` : ''}</div>
+      ${t.location ? `<div class="meta">📍 ${esc(t.location)}</div>` : ''}
+      ${t.lat ? `<div class="meta">🗺️ <a href="https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lng}">גוגל מפות</a> · <a href="https://waze.com/ul?ll=${t.lat},${t.lng}&navigate=yes">ווייז</a></div>` : ''}
+      ${trail ? `<div class="meta">🥾 מסלול: <b>${esc(trail.name)}</b>${trail.lengthKm ? ` · ${esc(trail.lengthKm)} ק״מ` : ''}${trail.difficulty ? ` · ${DIFF[trail.difficulty]}` : ''}${trail.mapUrl ? ` · <a href="${esc(trail.mapUrl)}">קישור</a>` : ''}</div>` : ''}
+      ${t.notes ? `<div style="white-space:pre-wrap;margin-top:8px">${esc(t.notes)}</div>` : ''}
+      ${(t.lat || trail?.lat || trail?.gpxFileId) ? '<div id="map" style="height:260px;margin-top:10px"></div>' : ''}
+    </div>
+    <div class="section"><div class="row"><h3>🗓️ מתי יוצאים? הצבעה על תאריכים</h3><span class="spacer"></span><button class="btn ghost small" onclick="addDateOption('${t.id}')">+ תאריך אפשרי</button></div>
+      ${opts.length ? `<table>${opts.map(o => { const vv = obj(o.votes)[mine];
+        return `<tr><td class="num"><b>${fmtDate(o.date)}</b> <span class="meta">${new Date(o.date + 'T12:00:00').toLocaleDateString('he-IL', { weekday: 'short' })}</span></td>
+        <td>${voteSummary(o)}</td>
+        <td><span class="vote">${['yes', 'maybe', 'no'].map(x => `<button type="button" class="${x} ${vv === x ? 'on' : ''}" onclick="doVote('${o.id}','${x}',${vv === x})">${{ yes: '✓', maybe: '?', no: '✗' }[x]}</button>`).join('')}</span></td>
+        <td><button type="button" class="btn small" onclick="pickDate('${t.id}','${o.date}')">קבע</button> <button type="button" class="btn ghost small" onclick="delOption('${o.id}')">✕</button></td></tr>`; }).join('')}</table>`
+        : '<div class="meta">הוסיפו כמה תאריכים אפשריים וכל אחד יסמן אם מתאים לו.</div>'}
+    </div>
+    <div class="section"><div class="row"><h3>💰 הוצאות</h3><span class="spacer"></span><button class="btn ghost small" onclick="addExpense({tripId:'${t.id}', date:'${t.startDate || today()}'})">+ הוצאה</button></div>
+      ${expenseTable(ex)}${ex.length ? '<div style="margin-top:10px">' + balanceHtml(ex) + '</div>' : ''}</div>
+    <div class="section"><div class="row"><h3>📷 תמונות</h3><span class="spacer"></span><label class="btn ghost small" style="margin:0;color:var(--accent)">+ העלאה<input type="file" accept="image/*" multiple hidden onchange="uploadPhotos('${t.id}', this.files)"></label></div>
+      ${photoGrid(ph)}</div>`;
+  if (document.getElementById('map')) drawMap([t], trail ? [trail] : [], 12);
+}
+function addDateOption(tripId) {
+  const d = prompt('תאריך אפשרי (למשל 2026-12-04):', today()); if (!d) return;
+  const iso = /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : (() => { const m = d.match(/(\d{1,2})[./](\d{1,2})[./](\d{2,4})/); return m ? `${m[3].length === 2 ? '20' + m[3] : m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : null; })();
+  if (!iso) return toast('תאריך לא תקין');
+  act(api('saveRecord', 'DateOptions', { tripId, date: iso, votes: { [me()]: 'yes' } }), 'נוסף');
+}
+const doVote = (id, val, wasOn) => act(api('vote', id, me(), wasOn ? '' : val));
+const delOption = id => confirm('להסיר את התאריך?') && act(api('deleteRecord', 'DateOptions', id));
+const pickDate = (tripId, date) => act(api('saveRecord', 'Trips', { id: tripId, startDate: date, endDate: date, status: 'planned' }), 'התאריך נקבע 🎉');
+
+function viewSchedule(v) {
+  const t0 = today();
+  const dated = D.trips.filter(t => t.startDate && (t.endDate || t.startDate) >= t0).sort((a, z) => a.startDate.localeCompare(z.startDate));
+  const polls = D.trips.filter(t => !t.startDate && D.dateOptions.some(o => o.tripId === t.id));
+  const noDate = D.trips.filter(t => !t.startDate && !polls.includes(t) && t.status !== 'done');
+  const byMonth = {};
+  dated.forEach(t => { const k = t.startDate.slice(0, 7); (byMonth[k] = byMonth[k] || []).push(t); });
+  v.innerHTML = `<div class="toolbar"><h2>לו״ז</h2><button class="btn" onclick="addTrip({status:'planned'})">+ טיול</button></div>
+    ${!dated.length && !polls.length && !noDate.length ? '<div class="empty">אין טיולים מתוכננים</div>' : ''}
+    ${Object.entries(byMonth).map(([k, ts]) => `<div class="section"><h3>${new Date(k + '-15').toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })}</h3>
+      ${ts.map(t => `<div class="card click" style="margin-bottom:8px" onclick="openTrip('${t.id}')"><div class="row"><b>${dateRange(t)}</b> · ${esc(t.name)}<span class="spacer"></span>
+        <a href="${calLink(t)}" onclick="event.stopPropagation()" class="meta">+ ליומן</a></div></div>`).join('')}</div>`).join('')}
+    ${polls.length ? `<div class="section"><h3>🗳️ מחכים להחלטה על תאריך</h3>${polls.map(t => {
+      const opts = D.dateOptions.filter(o => o.tripId === t.id);
+      const best = opts.map(o => [o, Object.values(obj(o.votes)).filter(x => x === 'yes').length]).sort((a, z) => z[1] - a[1])[0];
+      return `<div class="card click" style="margin-bottom:8px" onclick="openTrip('${t.id}')"><b>${esc(t.name)}</b><div class="meta">${opts.length} תאריכים בהצבעה · המוביל: ${fmtDate(best[0].date)} (${best[1]}/${D.members.length} ✓)</div>
+        ${obj(best[0].votes)[me()] ? '' : '<div class="meta" style="color:var(--warn)">עוד לא הצבעת</div>'}</div>`; }).join('')}</div>` : ''}
+    ${noDate.length ? `<div class="section"><h3>💡 בלי תאריך עדיין</h3>${noDate.map(t => `<div class="card click" style="margin-bottom:8px" onclick="openTrip('${t.id}')">${esc(t.name)} <span class="meta">— פתחו והוסיפו תאריכים להצבעה</span></div>`).join('')}</div>` : ''}`;
+}
+
+function viewTrails(v) {
+  const regions = [...new Set(D.trails.map(t => t.region).filter(Boolean))];
+  const f = store('trailRegion') || '';
+  const shown = D.trails.filter(t => !f || t.region === f).sort((a, z) => a.name.localeCompare(z.name, 'he'));
+  v.innerHTML = `<div class="toolbar"><h2>מסלולים</h2>
+      ${regions.length ? `<select style="width:auto" onchange="store('trailRegion', this.value); render()"><option value="">כל האזורים</option>${regions.map(r => `<option ${r === f ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>` : ''}
+      <button class="btn" onclick="addTrail()">+ מסלול</button></div>
+    ${!shown.length ? '<div class="empty">אין מסלולים עדיין. הוסיפו מסלול או ייבאו קישורים מהוואטסאפ.</div>' : ''}
+    <div class="grid">${shown.map(t => {
+      const trips = D.trips.filter(x => x.trailId === t.id);
+      return `<div class="card"><div class="row"><h3>${esc(t.name)}</h3><span class="spacer"></span>${t.difficulty ? `<span class="badge">${DIFF[t.difficulty]}</span>` : ''}</div>
+        <div class="meta">${[t.region, t.lengthKm && t.lengthKm + ' ק״מ', t.durationHrs && t.durationHrs + ' שעות'].filter(Boolean).map(esc).join(' · ')}</div>
+        ${t.notes ? `<div class="meta" style="white-space:pre-wrap">${esc(t.notes)}</div>` : ''}
+        ${trips.length ? `<div class="meta">טיילנו/נטייל: ${trips.map(x => `<a href="#" target="_self" onclick="openTrip('${x.id}');return false">${esc(x.name)}</a>`).join(', ')}</div>` : ''}
+        <div class="row" style="margin-top:8px">
+          ${t.mapUrl ? `<a class="btn ghost small" href="${esc(t.mapUrl)}">קישור</a>` : ''}
+          ${t.lat ? `<a class="btn ghost small" href="https://waze.com/ul?ll=${t.lat},${t.lng}&navigate=yes">ווייז</a>` : ''}
+          <label class="btn ghost small" style="margin:0;color:var(--accent)">${t.gpxFileId ? 'GPX ✓ החלפה' : '+ GPX'}<input type="file" accept=".gpx,application/gpx+xml" hidden onchange="uploadGpx('${t.id}', this.files[0])"></label>
+          <span class="spacer"></span>
+          <button class="btn ghost small" onclick="addTrip({trailId:'${t.id}', name:${esc(JSON.stringify(t.name))}, lat:'${t.lat}', lng:'${t.lng}'})">+ טיול</button>
+          <button class="btn ghost small" onclick="editTrail('${t.id}')">✎</button></div></div>`; }).join('')}</div>`;
+}
+async function uploadGpx(trailId, file) {
+  if (!file) return; toast('מעלה GPX…');
+  await act(api('uploadGpx', trailId, await file.text(), file.name), 'ה־GPX נשמר');
+}
+
+/* ---------- Map ---------- */
+const gpxCache = {};
+function baseLayers() {
+  return {
+    'מפה רגילה': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }),
+    'טופוגרפית': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '© OpenTopoMap' }),
+    'מפת סימון שבילים (IHM)': L.tileLayer('https://israelhiking.osm.org.il/Hebrew/Tiles/{z}/{x}/{y}.png', { maxNativeZoom: 16, maxZoom: 19, attribution: '© Israel Hiking Map' }),
+  };
+}
+function drawMap(trips, trails, zoom) {
+  const map = window._map = L.map('map');
+  const layers = baseLayers(); layers['מפה רגילה'].addTo(map);
+  L.control.layers(layers).addTo(map);
+  const pts = [];
+  const dot = c => L.divIcon({ className: '', html: `<div style="width:16px;height:16px;border-radius:50%;background:${c};border:2px solid #fff;box-shadow:0 0 3px #0008"></div>`, iconSize: [16, 16], iconAnchor: [8, 8] });
+  trails.forEach(t => {
+    if (t.lat) { pts.push([+t.lat, +t.lng]); L.marker([+t.lat, +t.lng], { icon: dot('#2f6b4f') }).addTo(map).bindPopup(`🥾 <b>${esc(t.name)}</b><br>${esc(t.region || '')}${t.lengthKm ? ' · ' + esc(t.lengthKm) + ' ק״מ' : ''}${t.mapUrl ? `<br><a href="${esc(t.mapUrl)}">קישור</a>` : ''}`); }
+    if (t.gpxFileId) loadTrack(map, t, pts);
+  });
+  trips.forEach(t => {
+    if (!t.lat) return; pts.push([+t.lat, +t.lng]);
+    L.marker([+t.lat, +t.lng], { icon: dot(t.status === 'done' ? '#777' : '#b5562f') }).addTo(map).bindPopup(`📍 <b>${esc(t.name)}</b><br>${dateRange(t)}<br><a href="#" target="_self" onclick="openTrip('${t.id}');return false">פתיחה</a>`);
+  });
+  if (pts.length === 1) map.setView(pts[0], zoom || 12);
+  else if (pts.length) map.fitBounds(pts, { padding: [30, 30] });
+  else map.setView([31.5, 34.9], 7);
+  setTimeout(() => map.invalidateSize(), 100);
+}
+async function loadTrack(map, t, pts) {
+  try {
+    const xml = gpxCache[t.gpxFileId] || (gpxCache[t.gpxFileId] = await api('getGpx', t.gpxFileId));
+    if (window._map !== map) return;
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    const ll = [...doc.querySelectorAll('trkpt, rtept')].map(p => [+p.getAttribute('lat'), +p.getAttribute('lon')]);
+    if (!ll.length) return;
+    const line = L.polyline(ll, { color: '#b5562f', weight: 4 }).addTo(map).bindPopup('🥾 ' + esc(t.name));
+    if (!pts.length || pts.length === 1) map.fitBounds(line.getBounds(), { padding: [20, 20] });
+  } catch (e) {}
+}
+function viewMap(v) {
+  const n = D.trails.filter(t => t.lat || t.gpxFileId).length + D.trips.filter(t => t.lat).length;
+  v.innerHTML = `<div class="toolbar"><h2>מפה</h2><span class="meta">🟢 מסלולים · 🟠 טיולים מתוכננים · ⚪ טיולים שעשינו</span></div>
+    ${n ? '' : '<div class="meta" style="margin-bottom:8px">עוד אין נקודות במפה — הוסיפו מיקום לטיול או למסלול (אפשר להדביק קישור מגוגל מפות).</div>'}
+    <div id="map"></div>`;
+  drawMap(D.trips, D.trails);
+}
+
+/* ---------- Photos ---------- */
+function photoGrid(ph) {
+  if (!ph.length) return '<div class="empty">אין תמונות עדיין</div>';
+  return `<div class="photos">${ph.map(p => `<div class="photo"><a href="https://drive.google.com/file/d/${esc(p.fileId)}/view"><img loading="lazy" src="${thumb(p.fileId)}" alt=""></a>
+    ${p.caption || p.takenBy ? `<div class="cap">${esc(p.caption)}${p.takenBy ? ' · ' + esc(p.takenBy) : ''}</div>` : ''}
+    <button type="button" class="x" title="מחיקה" onclick="delPhoto('${p.id}')">✕</button></div>`).join('')}</div>`;
+}
+const delPhoto = id => confirm('למחוק את התמונה?') && act(api('deleteRecord', 'Photos', id), 'נמחקה');
+function resize(file, max = 1800) {
+  return new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => { const s = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.85)); };
+    img.onerror = rej; img.src = url;
+  });
+}
+async function uploadPhotos(tripId, files) {
+  files = [...files]; if (!files.length) return;
+  if (!tripId) return toast('בחרו טיול קודם');
+  const caption = files.length === 1 ? (prompt('כיתוב לתמונה (לא חובה):') || '') : '';
+  let ok = 0;
+  for (const [i, f] of files.entries()) {
+    toast(`מעלה ${i + 1}/${files.length}…`);
+    try { await api('uploadPhoto', tripId, await resize(f), f.name.replace(/\.\w+$/, '') + '.jpg', caption, me()); ok++; }
+    catch (e) { toast('שגיאה בהעלאת ' + f.name); }
+  }
+  toast(`הועלו ${ok} תמונות ✓`); await reload();
+}
+function viewPhotos(v) {
+  const trips = D.trips.slice().sort((a, z) => (z.startDate || '').localeCompare(a.startDate || ''));
+  v.innerHTML = `<div class="toolbar"><h2>תמונות</h2>
+      ${trips.length ? `<select id="phTrip" style="width:auto">${trips.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('')}</select>
+      <label class="btn" style="margin:0;color:#fff">+ העלאה<input type="file" accept="image/*" multiple hidden onchange="uploadPhotos(document.getElementById('phTrip').value, this.files)"></label>` : ''}
+      ${D.photosFolderUrl ? `<a class="btn ghost" href="${D.photosFolderUrl}">התיקייה בדרייב</a>` : ''}</div>
+    ${!trips.length ? '<div class="empty">צרו טיול קודם, ואז תוכלו להעלות אליו תמונות.</div>' : ''}
+    ${trips.map(t => { const ph = D.photos.filter(p => p.tripId === t.id); return ph.length ? `<div class="section"><h3><a href="#" target="_self" onclick="openTrip('${t.id}');return false">${esc(t.name)}</a> <span class="meta">${dateRange(t)} · ${ph.length}</span></h3>${photoGrid(ph)}</div>` : ''; }).join('')}`;
+}
+
+/* ---------- Expenses ---------- */
+function viewExpenses(v) {
+  const f = store('expTrip') || '';
+  const ex = D.expenses.filter(e => !f || e.tripId === f);
+  v.innerHTML = `<div class="toolbar"><h2>הוצאות</h2>
+      <select style="width:auto" onchange="store('expTrip', this.value); render()"><option value="">כל הטיולים</option>${D.trips.map(t => `<option value="${t.id}" ${t.id === f ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select>
+      <button class="btn" onclick="addExpense({tripId:'${f}'})">+ הוצאה</button></div>
+    <div class="section"><h3>מי חייב למי</h3>${balanceHtml(ex)}</div>
+    <div class="section"><h3>כל ההוצאות</h3>${expenseTable(ex, !f)}</div>`;
+}
+
+/* ---------- WhatsApp import ---------- */
+function parseWhatsApp(text) {
+  text = text.replace(/[\u200e\u200f\u202a-\u202e]/g, '');
+  const re = /^\[?(\d{1,2})[./](\d{1,2})[./](\d{2,4}),?\s+(\d{1,2}):(\d{2})(?::\d{2})?(?:\s?([AaPp])\.?[Mm]\.?)?\]?\s?(?:-\s)?([^:]{1,40}):\s([\s\S]*)$/;
+  const lines = text.split(/\r?\n/), rows = lines.map(l => l.match(re));
+  // Day/month or month/day? (Israeli exports are D/M, US-locale phones are M/D)
+  const monthFirst = !rows.some(m => m && +m[1] > 12) && rows.some(m => m && +m[2] > 12);
+  const out = [];
+  lines.forEach((line, i) => {
+    const m = rows[i];
+    if (m) { const y = m[3].length === 2 ? '20' + m[3] : m[3];
+      const [mo, d] = monthFirst ? [m[1], m[2]] : [m[2], m[1]];
+      let h = +m[4]; if (m[6]) { const pm = /p/i.test(m[6]); h = (h % 12) + (pm ? 12 : 0); }
+      out.push({ date: `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`, time: `${String(h).padStart(2, '0')}:${m[5]}`, who: m[7].trim(), text: m[8] }); }
+    else if (out.length) out[out.length - 1].text += '\n' + line;
+  });
+  return out.map((msg, i) => {
+    const links = msg.text.match(/https?:\/\/\S+/g) || [];
+    const amounts = [...msg.text.matchAll(/(?:₪\s?(\d+(?:[.,]\d+)?))|(\d+(?:[.,]\d+)?)\s?(?:₪|ש["״']?ח|שקל(?:ים)?|nis)/gi)].map(m => parseFloat((m[1] || m[2]).replace(',', '.')));
+    const mapLinks = links.filter(l => /maps\.app\.goo\.gl|goo\.gl\/maps|google\.[a-z.]+\/maps|maps\.google|waze\.com/.test(l));
+    const trailLinks = links.filter(l => /israelhiking|amudanan|wikiloc|alltrails|parks\.org\.il|teva\.org\.il|tiuli|inature|komoot|strava/.test(l));
+    const media = /\.(jpe?g|png|heic|mp4)|<attached:|<[^<>]*omitted>|<המדיה הושמטה>|\(file attached\)|קובץ מצורף/i.test(msg.text);
+    return { ...msg, i, links, mapLinks, trailLinks, amounts, media };
+  });
+}
+function waImport(file) {
+  if (!file) return;
+  if (/\.zip$/i.test(file.name)) return toast('פתחו את קובץ ה־ZIP ובחרו את קובץ ה־txt שבתוכו');
+  file.text().then(t => { waMessages = parseWhatsApp(t); toast(`נקראו ${waMessages.length} הודעות`); render(); });
+}
+function waMember(who) { return D.members.find(m => who.includes(m) || m.includes(who)) || me(); }
+function waText(m) { return m.text.replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 80); }
+async function waAdd(kind, i) {
+  const m = waMessages[i];
+  if (kind === 'trail') {
+    const link = m.trailLinks[0] || m.mapLinks[0] || m.links[0] || '';
+    const c = m.mapLinks[0] ? m.mapLinks[0] : (parseCoords(link) ? link : '');
+    const pre = { name: waText(m) || 'מסלול מהוואטסאפ', mapUrl: link, notes: `מהוואטסאפ (${m.who}, ${fmtDate(m.date)}):\n${m.text}` };
+    if (c) { const ll = await coordsFrom(c); if (ll) { pre.lat = ll[0]; pre.lng = ll[1]; } }
+    addTrail(pre);
+  } else if (kind === 'expense') {
+    addExpense({ description: waText(m), amount: m.amounts[0] || '', payer: waMember(m.who), date: m.date });
+  } else if (kind === 'trip') {
+    const pre = { name: waText(m) || 'טיול', notes: m.text, startDate: '' };
+    if (m.mapLinks[0]) { const ll = await coordsFrom(m.mapLinks[0]); if (ll) { pre.lat = ll[0]; pre.lng = ll[1]; } }
+    addTrip(pre);
+  }
+}
+function viewImport(v) {
+  const f = waFilter;
+  const shown = waMessages.filter(m => f === 'all' ? true : f === 'places' ? m.mapLinks.length || m.trailLinks.length : f === 'money' ? m.amounts.length : f === 'media' ? m.media : (m.links.length || m.amounts.length));
+  const cnt = k => waMessages.filter(m => k === 'places' ? m.mapLinks.length || m.trailLinks.length : k === 'money' ? m.amounts.length : m.media).length;
+  v.innerHTML = `<div class="toolbar"><h2>ייבוא מוואטסאפ</h2></div>
+    <div class="card"><b>איך מייצאים:</b> בקבוצה בוואטסאפ ← שם הקבוצה למעלה ← <b>ייצוא צ׳אט</b> ← ״ללא מדיה״. שמרו את הקובץ (txt) ובחרו אותו כאן.
+      הקובץ נקרא רק בדפדפן — שום דבר לא נשמר עד שלוחצים ״+״ ליד הודעה.
+      <div style="margin-top:10px"><input type="file" accept=".txt,text/plain,.zip" onchange="waImport(this.files[0])"></div>
+      <div class="meta" style="margin-top:6px">תמונות מהקבוצה: ייצאו ״כולל מדיה״, פתחו את ה־ZIP, והעלו את התמונות בלשונית ״תמונות״.</div></div>
+    ${waMessages.length ? `<div class="toolbar" style="margin-top:14px">
+        ${[['useful', 'עם קישור או סכום'], ['places', `מקומות ומסלולים (${cnt('places')})`], ['money', `סכומים (${cnt('money')})`], ['media', `מדיה (${cnt('media')})`], ['all', `הכל (${waMessages.length})`]].map(([k, l]) =>
+          `<button class="btn small ${f === k ? '' : 'ghost'}" onclick="waFilter='${k}'; render()">${l}</button>`).join('')}</div>
+      ${shown.slice(-300).reverse().map(m => `<div class="msg"><div class="row"><span class="who">${esc(m.who)}</span><span class="meta">${fmtDate(m.date)} ${m.time}</span><span class="spacer"></span>
+          <button class="btn ghost small" onclick="waAdd('trail',${m.i})">+ מסלול</button>
+          <button class="btn ghost small" onclick="waAdd('trip',${m.i})">+ טיול</button>
+          <button class="btn ghost small" onclick="waAdd('expense',${m.i})">+ הוצאה${m.amounts.length ? ' ' + money(m.amounts[0]) : ''}</button></div>
+        <div class="txt">${esc(m.text).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1">$1</a>')}</div></div>`).join('') || '<div class="empty">אין הודעות בסינון הזה</div>'}
+      ${shown.length > 300 ? '<div class="meta">מוצגות 300 ההודעות האחרונות בסינון</div>' : ''}` : ''}`;
+}
+
+/* ---------- Settings ---------- */
+document.getElementById('settingsBtn').onclick = () => {
+  const f = document.getElementById('dlgForm');
+  f.innerHTML = `<h3>הגדרות</h3><div class="meta">שמות החברים (שינוי שם מעדכן גם את ההוצאות וההצבעות):</div>
+    ${D.members.map((m, i) => `<label>חבר ${i + 1}</label><input id="mem${i}" value="${esc(m)}">`).join('')}
+    <div class="section"><a href="${D.sheetUrl}">פתיחת גיליון הנתונים</a> · <a href="${D.photosFolderUrl}">תיקיית התמונות</a></div>
+    <div class="actions"><button class="btn" value="save">שמירה</button><button class="btn ghost" value="cancel">סגירה</button></div>`;
+  const dlg = document.getElementById('dlg'); dlg.showModal();
+  dlg.onclose = async () => {
+    if (dlg.returnValue !== 'save') return;
+    for (const [i, m] of D.members.entries()) {
+      const n = document.getElementById('mem' + i).value.trim();
+      if (n && n !== m) { await act(api('renameMember', m, n)); if (store('me') === m) store('me', n); }
+    }
+    fillMe(); toast('נשמר ✓');
+  };
+};
+function fillMe() {
+  const s = document.getElementById('me'); const cur = store('me');
+  s.innerHTML = D.members.map(m => `<option ${m === cur ? 'selected' : ''}>${esc(m)}</option>`).join('');
+  s.onchange = () => { store('me', s.value); render(); };
+}
+
+/* ---------- Boot ---------- */
+api('getData').then(d => {
+  D = d; fillMe(); document.getElementById('loading').remove(); render();
+  if (!store('me')) toast('בחרו את השם שלכם למעלה ⬆');
+}).catch(e => { document.getElementById('loading').textContent = 'שגיאה בטעינה: ' + (e.message || e); });
+</script>
+</body>
+</html>
