@@ -113,7 +113,7 @@ function fmtDate(d) { if (!d) return ''; const [y, m, dd] = d.split('-'); return
 function dateRange(t) { return t.startDate ? fmtDate(t.startDate) + (t.endDate && t.endDate !== t.startDate ? ' – ' + fmtDate(t.endDate) : '') : 'ללא תאריך'; }
 function today() { return new Date().toISOString().slice(0, 10); }
 function toast(m) { const t = document.getElementById('toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 2600); }
-function thumb(id, w = 400) { return `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${w}`; }
+function thumb(id, w = 400) { return `https:\/\/drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w${w}`; }
 
 function parseCoords(s) {
   s = decodeURIComponent(String(s || ''));
@@ -124,7 +124,7 @@ function parseCoords(s) {
 }
 async function coordsFrom(s) {
   let c = parseCoords(s);
-  if (!c && /^https?:\/\//.test(s.trim())) { try { c = parseCoords(await api('resolveLink', s.trim())); } catch (e) {} }
+  if (!c && /^https?:[\/][\/]/.test(s.trim())) { try { c = parseCoords(await api('resolveLink', s.trim())); } catch (e) {} }
   return c;
 }
 
@@ -216,7 +216,7 @@ function openForm(table, rec, title, onSaved) {
     if (fd.type === 'members') { const sel = list(v).length ? list(v) : D.members;
       return `<label>${fd.l}</label><div class="row">${D.members.map(m => `<label style="margin:0;color:var(--ink)"><input type="checkbox" name="split" value="${esc(m)}" ${sel.includes(m) ? 'checked' : ''}> ${esc(m)}</label>`).join('')}</div>`; }
     if (fd.type === 'coords') { const c = rec.lat && rec.lng ? `${rec.lat}, ${rec.lng}` : '';
-      return `<label for="${id}">${fd.l}</label><input id="${id}" value="${esc(c)}" placeholder="https://maps.app.goo.gl/… או 31.77, 35.21"><div id="minimap" class="minimap"></div>`; }
+      return `<label for="${id}">${fd.l}</label><input id="${id}" value="${esc(c)}" placeholder="https:\/\/maps.app.goo.gl/… או 31.77, 35.21"><div id="minimap" class="minimap"></div>`; }
     return `<label for="${id}">${fd.l}</label><input id="${id}" type="${fd.type || 'text'}" ${fd.type === 'number' ? 'step="any"' : ''} value="${esc(v)}" ${fd.req ? 'required' : ''}>`;
   }).join('') + `<div class="actions"><button class="btn" value="save">שמירה</button><button class="btn ghost" value="cancel" formnovalidate>ביטול</button><span class="spacer"></span>
     ${rec.id ? '<button class="btn danger" value="delete" formnovalidate>מחיקה</button>' : ''}</div>`;
@@ -249,7 +249,7 @@ function openForm(table, rec, title, onSaved) {
 function setupMiniMap(rec) {
   const inp = document.getElementById('f_coords');
   miniMap = L.map('minimap').setView(rec.lat ? [+rec.lat, +rec.lng] : [31.5, 34.9], rec.lat ? 12 : 7);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(miniMap);
+  L.tileLayer('https:\/\/{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(miniMap);
   let mk = rec.lat ? L.marker([+rec.lat, +rec.lng]).addTo(miniMap) : null;
   const place = ll => { if (mk) mk.setLatLng(ll); else mk = L.marker(ll).addTo(miniMap); };
   miniMap.on('click', e => { place(e.latlng); inp.value = e.latlng.lat.toFixed(6) + ', ' + e.latlng.lng.toFixed(6); });
@@ -298,7 +298,7 @@ function calLink(t) {
   const end = new Date((t.endDate || t.startDate) + 'T12:00:00'); end.setDate(end.getDate() + 1);
   const d = s => s.replace(/-/g, '');
   const p = new URLSearchParams({ action: 'TEMPLATE', text: t.name, dates: d(t.startDate) + '/' + d(end.toISOString().slice(0, 10)), location: t.location || '', details: t.notes || '' });
-  return `https://calendar.google.com/calendar/render?${p}`;
+  return `https:\/\/calendar.google.com/calendar/render?${p}`;
 }
 function voteSummary(o) {
   const v = obj(o.votes);
@@ -316,7 +316,7 @@ function viewTrip(v) {
       <button class="btn ghost small" onclick="editTrip('${t.id}')">✎ עריכה</button></div>
       <div class="meta" style="margin-top:6px">📅 ${dateRange(t)} ${t.startDate ? `· <a href="${calLink(t)}">הוספה ליומן גוגל</a>` : ''}</div>
       ${t.location ? `<div class="meta">📍 ${esc(t.location)}</div>` : ''}
-      ${t.lat ? `<div class="meta">🗺️ <a href="https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lng}">גוגל מפות</a> · <a href="https://waze.com/ul?ll=${t.lat},${t.lng}&navigate=yes">ווייז</a></div>` : ''}
+      ${t.lat ? `<div class="meta">🗺️ <a href="https:\/\/www.google.com/maps/search/?api=1&query=${t.lat},${t.lng}">גוגל מפות</a> · <a href="https:\/\/waze.com/ul?ll=${t.lat},${t.lng}&navigate=yes">ווייז</a></div>` : ''}
       ${trail ? `<div class="meta">🥾 מסלול: <b>${esc(trail.name)}</b>${trail.lengthKm ? ` · ${esc(trail.lengthKm)} ק״מ` : ''}${trail.difficulty ? ` · ${DIFF[trail.difficulty]}` : ''}${trail.mapUrl ? ` · <a href="${esc(trail.mapUrl)}">קישור</a>` : ''}</div>` : ''}
       ${t.notes ? `<div style="white-space:pre-wrap;margin-top:8px">${esc(t.notes)}</div>` : ''}
       ${(t.lat || trail?.lat || trail?.gpxFileId) ? '<div id="map" style="height:260px;margin-top:10px"></div>' : ''}
@@ -381,7 +381,7 @@ function viewTrails(v) {
         ${trips.length ? `<div class="meta">טיילנו/נטייל: ${trips.map(x => `<a href="#" target="_self" onclick="openTrip('${x.id}');return false">${esc(x.name)}</a>`).join(', ')}</div>` : ''}
         <div class="row" style="margin-top:8px">
           ${t.mapUrl ? `<a class="btn ghost small" href="${esc(t.mapUrl)}">קישור</a>` : ''}
-          ${t.lat ? `<a class="btn ghost small" href="https://waze.com/ul?ll=${t.lat},${t.lng}&navigate=yes">ווייז</a>` : ''}
+          ${t.lat ? `<a class="btn ghost small" href="https:\/\/waze.com/ul?ll=${t.lat},${t.lng}&navigate=yes">ווייז</a>` : ''}
           <label class="btn ghost small" style="margin:0;color:var(--accent)">${t.gpxFileId ? 'GPX ✓ החלפה' : '+ GPX'}<input type="file" accept=".gpx,application/gpx+xml" hidden onchange="uploadGpx('${t.id}', this.files[0])"></label>
           <span class="spacer"></span>
           <button class="btn ghost small" onclick="addTrip({trailId:'${t.id}', name:${esc(JSON.stringify(t.name))}, lat:'${t.lat}', lng:'${t.lng}'})">+ טיול</button>
@@ -396,9 +396,9 @@ async function uploadGpx(trailId, file) {
 const gpxCache = {};
 function baseLayers() {
   return {
-    'מפה רגילה': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }),
-    'טופוגרפית': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '© OpenTopoMap' }),
-    'מפת סימון שבילים (IHM)': L.tileLayer('https://israelhiking.osm.org.il/Hebrew/Tiles/{z}/{x}/{y}.png', { maxNativeZoom: 16, maxZoom: 19, attribution: '© Israel Hiking Map' }),
+    'מפה רגילה': L.tileLayer('https:\/\/{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }),
+    'טופוגרפית': L.tileLayer('https:\/\/{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '© OpenTopoMap' }),
+    'מפת סימון שבילים (IHM)': L.tileLayer('https:\/\/israelhiking.osm.org.il/Hebrew/Tiles/{z}/{x}/{y}.png', { maxNativeZoom: 16, maxZoom: 19, attribution: '© Israel Hiking Map' }),
   };
 }
 function drawMap(trips, trails, zoom) {
@@ -442,7 +442,7 @@ function viewMap(v) {
 /* ---------- Photos ---------- */
 function photoGrid(ph) {
   if (!ph.length) return '<div class="empty">אין תמונות עדיין</div>';
-  return `<div class="photos">${ph.map(p => `<div class="photo"><a href="https://drive.google.com/file/d/${esc(p.fileId)}/view"><img loading="lazy" src="${thumb(p.fileId)}" alt=""></a>
+  return `<div class="photos">${ph.map(p => `<div class="photo"><a href="https:\/\/drive.google.com/file/d/${esc(p.fileId)}/view"><img loading="lazy" src="${thumb(p.fileId)}" alt=""></a>
     ${p.caption || p.takenBy ? `<div class="cap">${esc(p.caption)}${p.takenBy ? ' · ' + esc(p.takenBy) : ''}</div>` : ''}
     <button type="button" class="x" title="מחיקה" onclick="delPhoto('${p.id}')">✕</button></div>`).join('')}</div>`;
 }
@@ -491,10 +491,9 @@ function viewExpenses(v) {
 
 /* ---------- WhatsApp import ---------- */
 function parseWhatsApp(text) {
-  text = text.replace(new RegExp('[' + String.fromCharCode(0x200e, 0x200f, 0x202a) + '-' + String.fromCharCode(0x202e) + ']', 'g'), ''); // strip invisible direction marks
+  text = text.replace(new RegExp('[' + String.fromCharCode(0x200e, 0x200f, 0x202a) + '-' + String.fromCharCode(0x202e) + ']', 'g'), '');
   const re = /^\[?(\d{1,2})[./](\d{1,2})[./](\d{2,4}),?\s+(\d{1,2}):(\d{2})(?::\d{2})?(?:\s?([AaPp])\.?[Mm]\.?)?\]?\s?(?:-\s)?([^:]{1,40}):\s([\s\S]*)$/;
   const lines = text.split(/\r?\n/), rows = lines.map(l => l.match(re));
-  // Day/month or month/day? (Israeli exports are D/M, US-locale phones are M/D)
   const monthFirst = !rows.some(m => m && +m[1] > 12) && rows.some(m => m && +m[2] > 12);
   const out = [];
   lines.forEach((line, i) => {
