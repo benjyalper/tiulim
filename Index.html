@@ -383,10 +383,16 @@ function viewTrails(v) {
         <div class="row" style="margin-top:8px">
           ${t.mapUrl ? `<a class="btn ghost small" href="${esc(t.mapUrl)}">קישור</a>` : ''}
           ${t.lat ? `<a class="btn ghost small" href="https:\/\/waze.com/ul?ll=${t.lat},${t.lng}&navigate=yes">ווייז</a>` : ''}
+          ${/mapeak[.]com[\/]share[\/]/.test(t.mapUrl || '') ? `<button type="button" class="btn ghost small" onclick="importMapeak('${t.id}')">📍 ${t.gpxFileId ? 'רענון מ־Mapeak' : 'ציור המסלול מ־Mapeak'}</button>` : ''}
           <label class="btn ghost small" style="margin:0;color:var(--accent)">${t.gpxFileId ? 'GPX ✓ החלפה' : '+ GPX'}<input type="file" accept=".gpx,application/gpx+xml" hidden onchange="uploadGpx('${t.id}', this.files[0])"></label>
           <span class="spacer"></span>
           <button class="btn ghost small" onclick="addTrip({trailId:'${t.id}', name:${esc(JSON.stringify(t.name))}, lat:'${t.lat}', lng:'${t.lng}'})">+ טיול</button>
           <button class="btn ghost small" onclick="editTrail('${t.id}')">✎</button></div></div>`; }).join('')}</div>`;
+}
+async function importMapeak(trailId) {
+  toast('מוריד את המסלול מ־Mapeak…');
+  const r = await act(api('importMapeak', trailId));
+  toast(`המסלול נוסף למפה ✓ (${r.routes > 1 ? r.routes + ' מסלולים' : 'מסלול אחד'}${r.km ? ', ' + r.km + ' ק״מ' : ''})`);
 }
 async function uploadGpx(trailId, file) {
   if (!file) return; toast('מעלה GPX…');
@@ -424,10 +430,16 @@ async function loadTrack(map, t, pts) {
     const xml = gpxCache[t.gpxFileId] || (gpxCache[t.gpxFileId] = await api('getGpx', t.gpxFileId));
     if (window._map !== map) return;
     const doc = new DOMParser().parseFromString(xml, 'application/xml');
-    const ll = [...doc.querySelectorAll('trkpt, rtept')].map(p => [+p.getAttribute('lat'), +p.getAttribute('lon')]);
-    if (!ll.length) return;
-    const line = L.polyline(ll, { color: '#b5562f', weight: 4 }).addTo(map).bindPopup('🥾 ' + esc(t.name));
-    if (!pts.length || pts.length === 1) map.fitBounds(line.getBounds(), { padding: [20, 20] });
+    const colors = ['#b5562f', '#2f5fb5', '#7a3fa0', '#2f6b4f'];
+    const parts = [...doc.querySelectorAll('trk, rte')];
+    const groups = (parts.length ? parts : [doc]).map(el => ({
+      name: el.querySelector ? (el.querySelector('name')?.textContent || '') : '',
+      ll: [...el.querySelectorAll('trkpt, rtept')].map(p => [+p.getAttribute('lat'), +p.getAttribute('lon')])
+    })).filter(g => g.ll.length);
+    if (!groups.length) return;
+    const lines = groups.map((g, i) => L.polyline(g.ll, { color: colors[i % colors.length], weight: 4, opacity: .85 }).addTo(map)
+      .bindPopup('🥾 ' + esc(t.name) + (groups.length > 1 && g.name ? '<br>' + esc(g.name) : '')));
+    if (!pts.length || pts.length === 1) map.fitBounds(L.featureGroup(lines).getBounds(), { padding: [20, 20] });
   } catch (e) {}
 }
 function viewMap(v) {

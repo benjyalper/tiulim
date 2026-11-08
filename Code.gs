@@ -321,6 +321,46 @@ function uploadGpx(trailId, text, filename) {
   return file.getId();
 }
 
+/**
+ * Downloads the route(s) of a Mapeak share link (the trail's map link, e.g. https://mapeak.com/share/veKHFCMY4U),
+ * saves them as a GPX file in Drive and attaches it to the trail. Fills length / start point if they're empty.
+ */
+function importMapeak(trailId) {
+  const trail = readTable_('Trails').filter(function (t) { return t.id === trailId; })[0];
+  if (!trail) throw new Error('Trail not found');
+  const m = String(trail.mapUrl || '').match(/mapeak\.com\/share\/([A-Za-z0-9_-]+)/);
+  if (!m) throw new Error('There is no Mapeak link on this trail');
+  const res = UrlFetchApp.fetch('https://mapeak.com/api/urls/' + m[1], { muteHttpExceptions: true });
+  if (res.getResponseCode() !== 200) throw new Error('Mapeak did not return the route (' + res.getResponseCode() + ')');
+  const d = JSON.parse(res.getContentText());
+  const routes = (d.dataContainer && d.dataContainer.routes) || [];
+  const x = function (v) { return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  const trks = [];
+  routes.forEach(function (r, i) {
+    const pts = [];
+    (r.segments || []).forEach(function (sg) {
+      (sg.latlngs || []).forEach(function (q) {
+        const last = pts[pts.length - 1];
+        if (!last || last.lat !== q.lat || last.lng !== q.lng) pts.push(q);
+      });
+    });
+    if (!pts.length) return;
+    trks.push('<trk><name>' + x('מסלול ' + (i + 1)) + '</name><trkseg>' + pts.map(function (q) {
+      return '<trkpt lat="' + q.lat.toFixed(6) + '" lon="' + q.lng.toFixed(6) + '">' + (q.alt != null ? '<ele>' + Math.round(q.alt) + '</ele>' : '') + '</trkpt>';
+    }).join('') + '</trkseg></trk>');
+  });
+  if (!trks.length) throw new Error('The Mapeak link has no route');
+  const gpx = '<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="tiulim (' + x(trail.mapUrl) + ')" xmlns="http://www.topografix.com/GPX/1/1">' +
+    '<metadata><name>' + x(trail.name) + '</name></metadata>' + trks.join('') + '</gpx>';
+  if (trail.gpxFileId) { try { DriveApp.getFileById(trail.gpxFileId).setTrashed(true); } catch (e) {} }
+  const file = folder_(GPX_FOLDER).createFile(trail.name + '.gpx', gpx, 'application/gpx+xml');
+  const upd = { id: trailId, gpxFileId: file.getId() };
+  if (!trail.lengthKm && d.length) upd.lengthKm = (d.length / 1000).toFixed(1);
+  if (!trail.lat && d.start) { upd.lat = Number(d.start.lat).toFixed(6); upd.lng = Number(d.start.lng).toFixed(6); }
+  saveRecord('Trails', upd);
+  return { routes: trks.length, km: d.length ? Math.round(d.length / 100) / 10 : '' };
+}
+
 function getGpx(fileId) {
   return DriveApp.getFileById(fileId).getBlob().getDataAsString();
 }
