@@ -1,7 +1,7 @@
 /**
  * Import of what was in the WhatsApp groups (exported 8.11.2026):
  *   "מזדקנים", "טיול זקנים למכתש" (Ramon crater, March 2022) and
- *   "טיול זקנים ל…" (Upper Galilee, April 2021).
+ *   "טיול זקנים ל…" (Upper Galilee, April 2021), plus the photos of the "מזדקנים" export with media.
  * In the Apps Script editor pick `importWhatsAppData` and press Run.
  * It renames the members and adds trails, trips, expenses and photos.
  * Anything that already exists (same name) is skipped, so running it again is safe.
@@ -39,7 +39,7 @@ WA_TRAILS.push(
 const WA_TRIPS = [
   { name: 'רמות מנשה', status: 'done', startDate: '2026-02-13', endDate: '2026-02-13', trail: 'menashe',
     location: 'עין השופט / גוערה', lat: '32.578968', lng: '35.123795',
-    notes: 'נבחר בסקר מבין 30/1, 6/2, 13/2, 20/2. יוני ואביב יצאו לסיבוב; בנג׳י לא הצליח להצטרף.\n"יש סחמניות לכולם".' },
+    notes: 'נבחר בסקר מבין 30/1, 6/2, 13/2, 20/2. יוני ואביב יצאו בבוקר, ובנג׳י חבר אליהם בשטח בצהריים (הגיע ב־12:05).\n"יש סחמניות לכולם".' },
   { name: 'נחל זויתן – שמורת יהודיה', status: 'done', startDate: '2026-08-09', endDate: '2026-08-09', trail: 'zavitan',
     location: 'חניון שמורת יהודיה, 08:00',
     notes: 'איסוף: יקנעם אזור תעשייה 07:00 / מחלף אליקים 06:50.\nכל אחד מביא גבינות, טונה, ירקות ופירות לפריסה לאורך המסלול.\n"היה כיף גדול!! כן ירבו"' },
@@ -73,6 +73,18 @@ const WA_PHOTOS = [
   { trip: 'גליל עליון – צבעון, דישון ואביב', folderId: '1FP0LJYxcN27J18apJCil2ZTLAXD075Zm',
     by: function (n) { return n >= 98 && n <= 131 ? 'גיא' : 'בנג׳י'; },
     captions: { 3: 'מפת המסלול', 4: 'מפת המסלול', 26: 'רשימת ציוד (חורף)', 96: 'היה ממש נורא 😉', 151: 'כרוב אלמוגים' } },
+  // "מזדקנים" export with media (unzipped in Drive): photos and videos picked by the date in the file name.
+  { trip: 'רמות מנשה', folderId: '1CRNyiU5WefBmc1AVwg4h7dVgcnYTErDE', dates: ['2026-02-13'],
+    by: function () { return 'בנג׳י'; }, captions: {} },
+  { trip: 'נחל זויתן – שמורת יהודיה', folderId: '1CRNyiU5WefBmc1AVwg4h7dVgcnYTErDE', dates: ['2026-08-09'],
+    by: function (n, d, hm) { return hm < '21:00' ? 'אביב' : 'בנג׳י'; }, captions: {} },
+  { trip: 'נגב – לילה בנחל מדור', folderId: '1CRNyiU5WefBmc1AVwg4h7dVgcnYTErDE', dates: ['2026-11-04', '2026-11-05', '2026-11-07'],
+    by: function (n, d, hm) {
+      if (d === '2026-11-04') return 'יוני';
+      if (d === '2026-11-05') return 'אביב';
+      return hm < '12:00' ? 'בנג׳י' : hm < '22:00' ? 'אביב' : 'יוני';
+    },
+    captions: { 2236: 'רשימת האוכל מהפעם הקודמת', 2264: 'ארוחת ערב', 2281: 'מספיק לנו? (שמן זית)' } },
 ];
 
 function seedPhoto_(tripId, file, caption, by) {
@@ -120,12 +132,20 @@ function importWhatsAppData() {
       let files = [];
       try {
         const it = DriveApp.getFolderById(p.folderId).getFiles();
-        while (it.hasNext()) { const f = it.next(); if (/^image\//.test(f.getMimeType())) files.push(f); }
+        while (it.hasNext()) {
+          const f = it.next(), name = f.getName();
+          if (p.dates) {
+            // WhatsApp names: 00002291-PHOTO-2026-11-07-11-56-24.jpg (GIFs, stickers and voice notes are skipped)
+            const m = name.match(/^\d+-(PHOTO|VIDEO)-(\d{4}-\d\d-\d\d)-(\d\d)-(\d\d)/);
+            if (m && p.dates.indexOf(m[2]) >= 0) files.push(f);
+          } else if (/^image\//.test(f.getMimeType())) files.push(f);
+        }
       } catch (err) { Logger.log('Could not open the photo folder for "' + p.trip + '": ' + err); return; }
       files.sort(function (a, b) { return a.getName() < b.getName() ? -1 : 1; });
       files.forEach(function (f) {
-        const n = parseInt(f.getName(), 10);
-        seedPhoto_(newTrips[p.trip], f, p.captions[n], p.by(n));
+        const name = f.getName(), n = parseInt(name, 10);
+        const m = name.match(/-(\d{4}-\d\d-\d\d)-(\d\d)-(\d\d)/) || [];
+        seedPhoto_(newTrips[p.trip], f, p.captions[n], p.by(n, m[1], m[2] + ':' + m[3]));
         added.photos++;
       });
       return;
