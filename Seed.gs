@@ -1,8 +1,9 @@
 /**
- * One-time import of what was in the WhatsApp group "מזדקנים" (exported 8.11.2026).
- * In the Apps Script editor pick `importWhatsAppData` and press Run — once.
- * It renames the members and adds trails, trips and expenses. If trips or trails
- * already exist it does nothing, so running it twice is safe.
+ * Import of what was in the WhatsApp groups (exported 8.11.2026):
+ *   "מזדקנים" and "טיול זקנים למכתש" (Ramon crater, March 2022).
+ * In the Apps Script editor pick `importWhatsAppData` and press Run.
+ * It renames the members and adds trails, trips, expenses and photos.
+ * Anything that already exists (same name) is skipped, so running it again is safe.
  */
 
 const WA_BY = 'ייבוא מוואטסאפ';
@@ -26,6 +27,10 @@ const WA_TRAILS = [
     notes: 'יום 1: הקפצה בג׳יפ משער מפעל אורון לחניון לילה נחל מדור, משם לגב זרחן, הר רכב, נחל צין ולכיוון נחל טרף.\nיום 2: ממשיכים במעלה נחל טרף וחוזרים דרך נחל שרף, או דרך קצרה יותר לנחל שרף ויורדים בו. הקפצה חזרה למפעל אורון.\nהקפצת ג׳יפ: 1100 ₪ לשלושתנו, מזומן לנהג. משאירים את הרכב ליד ש.ג.' },
 ];
 
+WA_TRAILS.push(
+  { key: 'ramon', name: 'מכתש רמון – מפער נקרות, גב חולית, נחל קמאי, הר ארדון (3 ימים)', region: 'מכתש רמון',
+    notes: 'יום 1: הקפצה מחניון בארות למפער נקרות. משם דרך כרבולת חרירים ועין גלד לחניון גב חולית (לילה 1).\nיום 2: נחל קמאי תחתון לכיוון הערוצים העליונים של נחל אנמר. לינה באזור פרשת המים אנמר–קמאי (מזרחית להר ארדון).\nיום 3: נחל קמאי עליון, ירידה בהר ארדון והליכה לחניון בארות.\nלוגיסטיקה: הקפצה 500 ₪; הטמנת מים בגב חולית (10 ₪ לליטר, ~4.5 ליטר לאדם ליום כולל בישול – 40 ליטר לארבעה); הטמנת עצים ללילה בגב חולית. ביום 1 – 3 ליטר למסלול.' });
+
 const WA_TRIPS = [
   { name: 'רמות מנשה', status: 'done', startDate: '2026-02-13', endDate: '2026-02-13', trail: 'menashe',
     location: 'עין השופט / גוערה', lat: '32.578968', lng: '35.123795',
@@ -36,6 +41,9 @@ const WA_TRIPS = [
   { name: 'נגב – לילה בנחל מדור', status: 'done', startDate: '2026-11-06', endDate: '2026-11-07', trail: 'negev',
     location: 'שער מפעל אורון (ג׳יפ ב־08:00, חזרה בשבת 16:30–17:00)',
     notes: 'איסופים: בנג׳י ביקנעם 05:30, אביב בתחנת הדלק ניר אליהו ~06:15.\nמים: 6 בקבוקים של 1.5 ליטר לכל אחד. ערב: נודלס עם תרנגולת ומדורה.\nאביב קנה את האוכל; יוני הביא גזיה וסיר; בנג׳י פקל קפה (בלי קפה…).\nהקפצת ג׳יפ: 1100 ₪ לשלושתנו – לבדוק מי שילם.' },
+  { name: 'מכתש רמון – 3 ימים', status: 'done', startDate: '2022-03-10', endDate: '2022-03-12', trail: 'ramon',
+    location: 'חניון בארות (הקפצה ב־09:45)',
+    notes: 'משתתפים: בנג׳י, אביב, יוני וגלעד (חבר של אורית). דותן ויתר בגלל פציעה.\nיציאה ב־05:30 מבנג׳י, ~06:45 מאביב בכפר סבא, ברכב של גלעד (אאוטלנדר).\nיוני תכנן את המסלול וקנה את האוכל (תפריט בתמונות). גזיה אחת עם בלון מלא, בלי ערכת ע״ר.\nסגירת תקציב: 360 ₪ לאדם, הועבר ליוני.\nאלבום משותף: https://photos.app.goo.gl/KLp6ceREGWqjigGXA\n"היה מעולה!"' },
   { name: 'הטיול הבא – מרץ 2027', status: 'idea', startDate: '', endDate: '',
     notes: '"מצפה לטיול הבא במרץ 🙂" – צריך לנעוץ תאריך (ולא 31/2…).' },
 ];
@@ -46,31 +54,62 @@ const WA_EXPENSES = [
   ['נגב – לילה בנחל מדור', 'אוכל', '350', 'אביב'],
 ];
 
+// Photos taken straight out of a WhatsApp export ZIP that is in Drive: { file in zip: caption }
+const WA_PHOTOS = [
+  { trip: 'מכתש רמון – 3 ימים', zipId: '1UJ0JAATB8BT_InnFKnLwqq7-Zyl8uvDJ', by: 'יוני', files: {
+    '00000012-PHOTO-2022-03-05-19-35-18.jpg': 'מפת המסלול – בירוק הקפצה, בצהוב הליכה',
+    '00000015-PHOTO-2022-03-05-19-35-41.jpg': 'מפת המסלול – יום 1',
+    '00000026-PHOTO-2022-03-08-17-42-54.jpg': 'התפריט',
+  } },
+];
+
 function importWhatsAppData() {
   ensureSetup_();
   const members = readTable_('Members').map(function (m) { return m.name; });
   if (members.indexOf('חבר 2') >= 0) renameMember('חבר 2', 'אביב');
   if (members.indexOf('חבר 3') >= 0) renameMember('חבר 3', 'יוני');
 
-  if (readTable_('Trips').length || readTable_('Trails').length) {
-    Logger.log('There are already trips or trails, so nothing was imported.');
-    return;
-  }
+  const byName = function (table) {
+    const o = {};
+    readTable_(table).forEach(function (r) { o[r.name] = r.id; });
+    return o;
+  };
+  const trails = byName('Trails'), trips = byName('Trips'), added = { trails: 0, trips: 0, expenses: 0, photos: 0 };
   const trailIds = {};
   WA_TRAILS.forEach(function (t) {
+    if (trails[t.name]) { trailIds[t.key] = trails[t.name]; return; }
     const rec = Object.assign({ createdBy: WA_BY }, t);
     delete rec.key;
     trailIds[t.key] = saveRecord('Trails', rec).id;
+    added.trails++;
   });
-  const tripIds = {};
+  const newTrips = {};
   WA_TRIPS.forEach(function (t) {
+    if (trips[t.name]) return;
     const rec = Object.assign({ createdBy: WA_BY, trailId: t.trail ? trailIds[t.trail] : '' }, t);
     delete rec.trail;
-    tripIds[t.name] = saveRecord('Trips', rec).id;
+    newTrips[t.name] = saveRecord('Trips', rec).id;
+    added.trips++;
   });
   WA_EXPENSES.forEach(function (e) {
+    if (!newTrips[e[0]]) return;
     const trip = WA_TRIPS.filter(function (t) { return t.name === e[0]; })[0];
-    saveRecord('Expenses', { tripId: tripIds[e[0]], date: trip.endDate, description: e[1], amount: e[2], payer: e[3], splitWith: [], createdBy: WA_BY });
+    saveRecord('Expenses', { tripId: newTrips[e[0]], date: trip.endDate, description: e[1], amount: e[2], payer: e[3], splitWith: [], createdBy: WA_BY });
+    added.expenses++;
   });
-  Logger.log('Imported ' + WA_TRAILS.length + ' trails, ' + WA_TRIPS.length + ' trips, ' + WA_EXPENSES.length + ' expenses.');
+  WA_PHOTOS.forEach(function (p) {
+    if (!newTrips[p.trip]) return;
+    let blobs = [];
+    try { blobs = Utilities.unzip(DriveApp.getFileById(p.zipId).getBlob().setContentType('application/zip')); }
+    catch (err) { Logger.log('Could not open the ZIP for "' + p.trip + '": ' + err); return; }
+    blobs.forEach(function (b) {
+      const name = String(b.getName()).split('/').pop();
+      if (!(name in p.files)) return;
+      const file = folder_(PHOTOS_FOLDER).createFile(b.setContentType('image/jpeg').setName(name));
+      try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (err) {}
+      saveRecord('Photos', { tripId: newTrips[p.trip], fileId: file.getId(), caption: p.files[name], takenBy: p.by });
+      added.photos++;
+    });
+  });
+  Logger.log('Added ' + added.trails + ' trails, ' + added.trips + ' trips, ' + added.expenses + ' expenses, ' + added.photos + ' photos.');
 }
