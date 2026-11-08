@@ -1,6 +1,7 @@
 /**
  * Import of what was in the WhatsApp groups (exported 8.11.2026):
- *   "מזדקנים" and "טיול זקנים למכתש" (Ramon crater, March 2022).
+ *   "מזדקנים", "טיול זקנים למכתש" (Ramon crater, March 2022) and
+ *   "טיול זקנים ל…" (Upper Galilee, April 2021).
  * In the Apps Script editor pick `importWhatsAppData` and press Run.
  * It renames the members and adds trails, trips, expenses and photos.
  * Anything that already exists (same name) is skipped, so running it again is safe.
@@ -31,6 +32,10 @@ WA_TRAILS.push(
   { key: 'ramon', name: 'מכתש רמון – מפער נקרות, גב חולית, נחל קמאי, הר ארדון (3 ימים)', region: 'מכתש רמון',
     notes: 'יום 1: הקפצה מחניון בארות למפער נקרות. משם דרך כרבולת חרירים ועין גלד לחניון גב חולית (לילה 1).\nיום 2: נחל קמאי תחתון לכיוון הערוצים העליונים של נחל אנמר. לינה באזור פרשת המים אנמר–קמאי (מזרחית להר ארדון).\nיום 3: נחל קמאי עליון, ירידה בהר ארדון והליכה לחניון בארות.\nלוגיסטיקה: הקפצה 500 ₪; הטמנת מים בגב חולית (10 ₪ לליטר, ~4.5 ליטר לאדם ליום כולל בישול – 40 ליטר לארבעה); הטמנת עצים ללילה בגב חולית. ביום 1 – 3 ליטר למסלול.' });
 
+WA_TRAILS.push(
+  { key: 'galil', name: 'גליל עליון – חרבת חממה, נחל צבעון, נחל דישון, נחל אביב (יומיים)', region: 'גליל עליון', lengthKm: '20',
+    notes: 'כיוון ההליכה צפונה.\nיום 1 (~7 ק״מ, בעיקר ירידה בשביל נוח): מתחילים בחרבת חממה ויורדים בנחל צבעון. לינה באזור עין פועה, סמוך למפגש עם נחל גוש חלב.\nיום 2 (~13 ק״מ, רובו ירידה): ממשיכים בנחל דישון ומסיימים בעלייה בנחל אביב.\n"מסלולי משפחות, לא קשים במיוחד." עד ~6 שעות הליכה ביום. 5 ליטר מים ליום. אפשר לקצר בקטעים שליד הכביש (העלייה ליראון רק מאריכה).' });
+
 const WA_TRIPS = [
   { name: 'רמות מנשה', status: 'done', startDate: '2026-02-13', endDate: '2026-02-13', trail: 'menashe',
     location: 'עין השופט / גוערה', lat: '32.578968', lng: '35.123795',
@@ -44,6 +49,9 @@ const WA_TRIPS = [
   { name: 'מכתש רמון – 3 ימים', status: 'done', startDate: '2022-03-10', endDate: '2022-03-12', trail: 'ramon',
     location: 'חניון בארות (הקפצה ב־09:45)',
     notes: 'משתתפים: בנג׳י, אביב, יוני וגלעד (חבר של אורית). דותן ויתר בגלל פציעה.\nיציאה ב־05:30 מבנג׳י, ~06:45 מאביב בכפר סבא, ברכב של גלעד (אאוטלנדר).\nיוני תכנן את המסלול וקנה את האוכל (תפריט בתמונות). גזיה אחת עם בלון מלא, בלי ערכת ע״ר.\nסגירת תקציב: 360 ₪ לאדם, הועבר ליוני.\nאלבום משותף: https://photos.app.goo.gl/KLp6ceREGWqjigGXA\n"היה מעולה!"' },
+  { name: 'גליל עליון – צבעון, דישון ואביב', status: 'done', startDate: '2021-04-23', endDate: '2021-04-24', trail: 'galil',
+    location: 'חרבת חממה, 11:00', lat: '33.008911', lng: '35.393562',
+    notes: 'הטיול הראשון של הקבוצה. משתתפים: בנג׳י, אביב, יוני, גיא (חבר של בנג׳י) וכהן.\nמסיימים בנחל אביב – לכבוד יום ההולדת של אביב.\nאביב אסף את בנג׳י ממגדים; ארבעה רכבים.\nקניות: 345 ₪ (בנג׳י), 50 ₪ מכל אחד בביט – "1+1=3".\nמיקומים שבנג׳י שלח ביום היציאה: 33.008911, 35.393562 ואחר כך "בואו לפה" – 33.082539, 35.459522.\n"תודה רבה לכולם. היה ממש מעולה"' },
   { name: 'הטיול הבא – מרץ 2027', status: 'idea', startDate: '', endDate: '',
     notes: '"מצפה לטיול הבא במרץ 🙂" – צריך לנעוץ תאריך (ולא 31/2…).' },
 ];
@@ -61,7 +69,16 @@ const WA_PHOTOS = [
     '00000015-PHOTO-2022-03-05-19-35-41.jpg': 'מפת המסלול – יום 1',
     '00000026-PHOTO-2022-03-08-17-42-54.jpg': 'התפריט',
   } },
+  // Unzipped export folder in Drive: every photo in it is added (captions by WhatsApp file number).
+  { trip: 'גליל עליון – צבעון, דישון ואביב', folderId: '1FP0LJYxcN27J18apJCil2ZTLAXD075Zm',
+    by: function (n) { return n >= 98 && n <= 131 ? 'גיא' : 'בנג׳י'; },
+    captions: { 3: 'מפת המסלול', 4: 'מפת המסלול', 26: 'רשימת ציוד (חורף)', 96: 'היה ממש נורא 😉', 151: 'כרוב אלמוגים' } },
 ];
+
+function seedPhoto_(tripId, file, caption, by) {
+  try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (err) {}
+  saveRecord('Photos', { tripId: tripId, fileId: file.getId(), caption: caption || '', takenBy: by || '' });
+}
 
 function importWhatsAppData() {
   ensureSetup_();
@@ -99,6 +116,20 @@ function importWhatsAppData() {
   });
   WA_PHOTOS.forEach(function (p) {
     if (!newTrips[p.trip]) return;
+    if (p.folderId) {
+      let files = [];
+      try {
+        const it = DriveApp.getFolderById(p.folderId).getFiles();
+        while (it.hasNext()) { const f = it.next(); if (/^image\//.test(f.getMimeType())) files.push(f); }
+      } catch (err) { Logger.log('Could not open the photo folder for "' + p.trip + '": ' + err); return; }
+      files.sort(function (a, b) { return a.getName() < b.getName() ? -1 : 1; });
+      files.forEach(function (f) {
+        const n = parseInt(f.getName(), 10);
+        seedPhoto_(newTrips[p.trip], f, p.captions[n], p.by(n));
+        added.photos++;
+      });
+      return;
+    }
     let blobs = [];
     try { blobs = Utilities.unzip(DriveApp.getFileById(p.zipId).getBlob().setContentType('application/zip')); }
     catch (err) { Logger.log('Could not open the ZIP for "' + p.trip + '": ' + err); return; }
@@ -106,8 +137,7 @@ function importWhatsAppData() {
       const name = String(b.getName()).split('/').pop();
       if (!(name in p.files)) return;
       const file = folder_(PHOTOS_FOLDER).createFile(b.setContentType('image/jpeg').setName(name));
-      try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (err) {}
-      saveRecord('Photos', { tripId: newTrips[p.trip], fileId: file.getId(), caption: p.files[name], takenBy: p.by });
+      seedPhoto_(newTrips[p.trip], file, p.files[name], p.by);
       added.photos++;
     });
   });
