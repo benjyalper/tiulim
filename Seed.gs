@@ -64,11 +64,10 @@ const WA_EXPENSES = [
 
 // Photos taken straight out of a WhatsApp export ZIP that is in Drive: { file in zip: caption }
 const WA_PHOTOS = [
-  { trip: 'מכתש רמון – 3 ימים', zipId: '1UJ0JAATB8BT_InnFKnLwqq7-Zyl8uvDJ', by: 'יוני', files: {
-    '00000012-PHOTO-2022-03-05-19-35-18.jpg': 'מפת המסלול – בירוק הקפצה, בצהוב הליכה',
-    '00000015-PHOTO-2022-03-05-19-35-41.jpg': 'מפת המסלול – יום 1',
-    '00000026-PHOTO-2022-03-08-17-42-54.jpg': 'התפריט',
-  } },
+  // Unzipped "טיול זקנים למכתש" folder: only the route maps and the menu (the rest are Waze screenshots).
+  { trip: 'מכתש רמון – 3 ימים', folderId: '1awJ9zKOy0Ioo9dCizbc952fRqJPPuwmU', only: [12, 15, 26],
+    by: function () { return 'יוני'; },
+    captions: { 12: 'מפת המסלול – בירוק הקפצה, בצהוב הליכה', 15: 'מפת המסלול – יום 1', 26: 'התפריט' } },
   // Unzipped export folder in Drive: every photo in it is added (captions by WhatsApp file number).
   { trip: 'גליל עליון – צבעון, דישון ואביב', folderId: '1FP0LJYxcN27J18apJCil2ZTLAXD075Zm',
     by: function (n) { return n >= 98 && n <= 131 ? 'גיא' : 'בנג׳י'; },
@@ -126,8 +125,11 @@ function importWhatsAppData() {
     saveRecord('Expenses', { tripId: newTrips[e[0]], date: trip.endDate, description: e[1], amount: e[2], payer: e[3], splitWith: [], createdBy: WA_BY });
     added.expenses++;
   });
+  const withPhotos = {};
+  readTable_('Photos').forEach(function (r) { withPhotos[r.tripId] = true; });
   WA_PHOTOS.forEach(function (p) {
-    if (!newTrips[p.trip]) return;
+    const tripId = newTrips[p.trip] || trips[p.trip];
+    if (!tripId || withPhotos[tripId]) return;
     if (p.folderId) {
       let files = [];
       try {
@@ -138,14 +140,14 @@ function importWhatsAppData() {
             // WhatsApp names: 00002291-PHOTO-2026-11-07-11-56-24.jpg (GIFs, stickers and voice notes are skipped)
             const m = name.match(/^\d+-(PHOTO|VIDEO)-(\d{4}-\d\d-\d\d)-(\d\d)-(\d\d)/);
             if (m && p.dates.indexOf(m[2]) >= 0) files.push(f);
-          } else if (/^image\//.test(f.getMimeType())) files.push(f);
+          } else if (/^image\//.test(f.getMimeType()) && (!p.only || p.only.indexOf(parseInt(name, 10)) >= 0)) files.push(f);
         }
       } catch (err) { Logger.log('Could not open the photo folder for "' + p.trip + '": ' + err); return; }
       files.sort(function (a, b) { return a.getName() < b.getName() ? -1 : 1; });
       files.forEach(function (f) {
         const name = f.getName(), n = parseInt(name, 10);
         const m = name.match(/-(\d{4}-\d\d-\d\d)-(\d\d)-(\d\d)/) || [];
-        seedPhoto_(newTrips[p.trip], f, p.captions[n], p.by(n, m[1], m[2] + ':' + m[3]));
+        seedPhoto_(tripId, f, p.captions[n], p.by(n, m[1], m[2] + ':' + m[3]));
         added.photos++;
       });
       return;
@@ -157,7 +159,7 @@ function importWhatsAppData() {
       const name = String(b.getName()).split('/').pop();
       if (!(name in p.files)) return;
       const file = folder_(PHOTOS_FOLDER).createFile(b.setContentType('image/jpeg').setName(name));
-      seedPhoto_(newTrips[p.trip], file, p.files[name], p.by);
+      seedPhoto_(tripId, file, p.files[name], p.by);
       added.photos++;
     });
   });
