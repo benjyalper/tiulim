@@ -243,10 +243,14 @@ function sha256_(bytes) {
     .map(function (b) { return ('0' + (b & 255).toString(16)).slice(-2); }).join('');
 }
 
-/** Returns the name of the trip that already has a photo with this fingerprint, or ''. */
-function photoExists(hash) {
-  if (!hash) return '';
-  const hit = readTable_('Photos').filter(function (p) { return p.hash === hash; })[0];
+/**
+ * Returns the name of the trip that already has this photo, or ''.
+ * hash = fingerprint of the original file; rhash = fingerprint of the resized copy the page would upload
+ * (matches photos that were uploaded before fingerprints existed and were fingerprinted afterwards).
+ */
+function photoExists(hash, rhash) {
+  if (!hash && !rhash) return '';
+  const hit = readTable_('Photos').filter(function (p) { return p.hash && (p.hash === hash || p.hash === rhash); })[0];
   if (!hit) return '';
   const trip = readTable_('Trips').filter(function (t) { return t.id === hit.tripId; })[0];
   return trip ? trip.name : '?';
@@ -267,10 +271,40 @@ function fillPhotoHashes() {
   Logger.log('Fingerprinted ' + done + ' photos' + (failed ? ', ' + failed + ' could not be read' : '') + (left ? ', ' + left + ' left – run again' : '.'));
 }
 
+/**
+ * Run from the editor: removes repeated photos from the app's list (rows only – files in Drive are NOT deleted).
+ * Within one trip, the same photo (same fingerprint) is kept once – the earliest. The same photo in two
+ * different trips is only reported, not removed. Run fillPhotoHashes first so every photo has a fingerprint.
+ */
+function removeDuplicatePhotos() {
+  ensureSetup_();
+  const trips = {};
+  readTable_('Trips').forEach(function (t) { trips[t.id] = t.name; });
+  const report = withLock_(function () {
+    const sh = sheet_('Photos'), vals = sh.getDataRange().getValues(), head = vals[0];
+    const cT = head.indexOf('tripId'), cH = head.indexOf('hash'), cC = head.indexOf('createdAt');
+    const rows = [];
+    for (let i = 1; i < vals.length; i++) if (vals[i][0] && vals[i][cH]) rows.push({ row: i + 1, trip: String(vals[i][cT]), hash: String(vals[i][cH]), at: String(vals[i][cC]) });
+    rows.sort(function (a, b) { return a.at < b.at ? -1 : a.at > b.at ? 1 : a.row - b.row; });
+    const seen = {}, byHash = {}, remove = [];
+    rows.forEach(function (r) {
+      const k = r.trip + '|' + r.hash;
+      if (seen[k]) remove.push(r.row); else seen[k] = true;
+      (byHash[r.hash] = byHash[r.hash] || {})[r.trip] = true;
+    });
+    remove.sort(function (a, b) { return b - a; }).forEach(function (row) { sh.deleteRow(row); });
+    const cross = Object.keys(byHash).filter(function (h) { return Object.keys(byHash[h]).length > 1; })
+      .map(function (h) { return Object.keys(byHash[h]).map(function (t) { return trips[t] || t; }).join(' + '); });
+    return { removed: remove.length, cross: cross };
+  });
+  Logger.log('Removed ' + report.removed + ' repeated photos.' +
+    (report.cross.length ? ' Same photo in two trips (kept, move or delete in the app if you like): ' + report.cross.join(' ; ') : ''));
+}
+
 /** dataUrl: "data:image/jpeg;base64,...." (already resized by the page); hash: SHA-256 of the original file */
-function uploadPhoto(tripId, dataUrl, filename, caption, member, hash) {
-  if (hash) {
-    const where = photoExists(hash);
+function uploadPhoto(tripId, dataUrl, filename, caption, member, hash, rhash) {
+  if (hash || rhash) {
+    const where = photoExists(hash, rhash);
     if (where) return { duplicate: true, trip: where };
   }
   const m = String(dataUrl).match(/^data:([^;]+);base64,(.*)$/);
