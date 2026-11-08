@@ -85,7 +85,6 @@
 <div id="toast"></div>
 
 <script>
-/* ================= State & API ================= */
 let D = { members: [], trips: [], trails: [], expenses: [], photos: [], dateOptions: [] };
 let tab = 'trips', currentTrip = null, waMessages = [], waFilter = 'useful';
 const STATUS = { idea: 'רעיון', planned: 'מתוכנן', done: 'בוצע' };
@@ -102,8 +101,6 @@ async function act(promise, okMsg) {
 }
 function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
 function me() { return document.getElementById('me').value; }
-
-/* ================= Utils ================= */
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const byId = (list, id) => list.find(x => x.id === id);
 const money = n => '₪' + (Math.round(n * 100) / 100).toLocaleString('he-IL');
@@ -127,8 +124,6 @@ async function coordsFrom(s) {
   if (!c && /^https?:[\/][\/]/.test(s.trim())) { try { c = parseCoords(await api('resolveLink', s.trim())); } catch (e) {} }
   return c;
 }
-
-/* ================= Money ================= */
 function balances(expenses) {
   const b = {}; D.members.forEach(m => b[m] = 0);
   expenses.forEach(e => {
@@ -171,8 +166,6 @@ function expenseTable(expenses, showTrip) {
       <td>${esc(e.payer)}</td><td class="num">${money(parseFloat(e.amount) || 0)}</td>
       <td><button type="button" class="btn ghost small" onclick="editExpense('${e.id}')">✎</button></td></tr>`).join('')}</table>`;
 }
-
-/* ================= Forms ================= */
 const FIELDS = {
   Trips: [
     { k: 'name', l: 'שם הטיול', req: 1 },
@@ -262,8 +255,6 @@ const addTrail = (pre = {}) => openForm('Trails', pre, 'מסלול חדש');
 const editTrail = id => openForm('Trails', byId(D.trails, id), 'עריכת מסלול');
 const addExpense = (pre = {}) => openForm('Expenses', { payer: me(), date: today(), ...pre }, 'הוצאה חדשה');
 const editExpense = id => openForm('Expenses', byId(D.expenses, id), 'עריכת הוצאה');
-
-/* ================= Views ================= */
 function render() {
   document.getElementById('tabs').innerHTML = TABS.map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" onclick="go('${k}')">${l}</button>`).join('');
   const v = document.getElementById('view');
@@ -331,7 +322,7 @@ function viewTrip(v) {
     </div>
     <div class="section"><div class="row"><h3>💰 הוצאות</h3><span class="spacer"></span><button class="btn ghost small" onclick="addExpense({tripId:'${t.id}', date:'${t.startDate || today()}'})">+ הוצאה</button></div>
       ${expenseTable(ex)}${ex.length ? '<div style="margin-top:10px">' + balanceHtml(ex) + '</div>' : ''}</div>
-    <div class="section"><div class="row"><h3>📷 תמונות</h3><span class="spacer"></span><label class="btn ghost small" style="margin:0;color:var(--accent)">+ העלאה<input type="file" accept="image/*" multiple hidden onchange="uploadPhotos('${t.id}', this.files)"></label></div>
+    <div class="section"><div class="row"><h3>📷 תמונות</h3><span class="spacer"></span><label class="btn ghost small" style="margin:0;color:var(--accent)">+ העלאה<input type="file" accept="image/\*" multiple hidden onchange="uploadPhotos('${t.id}', this.files)"></label></div>
       ${photoGrid(ph)}</div>`;
   if (document.getElementById('map')) drawMap([t], trail ? [trail] : [], 12);
 }
@@ -391,8 +382,6 @@ async function uploadGpx(trailId, file) {
   if (!file) return; toast('מעלה GPX…');
   await act(api('uploadGpx', trailId, await file.text(), file.name), 'ה־GPX נשמר');
 }
-
-/* ---------- Map ---------- */
 const gpxCache = {};
 function baseLayers() {
   return {
@@ -438,8 +427,6 @@ function viewMap(v) {
     <div id="map"></div>`;
   drawMap(D.trips, D.trails);
 }
-
-/* ---------- Photos ---------- */
 function photoGrid(ph) {
   if (!ph.length) return '<div class="empty">אין תמונות עדיין</div>';
   return `<div class="photos">${ph.map(p => `<div class="photo"><a href="https:\/\/drive.google.com/file/d/${esc(p.fileId)}/view"><img loading="lazy" src="${thumb(p.fileId)}" alt=""></a>
@@ -472,13 +459,11 @@ function viewPhotos(v) {
   const trips = D.trips.slice().sort((a, z) => (z.startDate || '').localeCompare(a.startDate || ''));
   v.innerHTML = `<div class="toolbar"><h2>תמונות</h2>
       ${trips.length ? `<select id="phTrip" style="width:auto">${trips.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('')}</select>
-      <label class="btn" style="margin:0;color:#fff">+ העלאה<input type="file" accept="image/*" multiple hidden onchange="uploadPhotos(document.getElementById('phTrip').value, this.files)"></label>` : ''}
+      <label class="btn" style="margin:0;color:#fff">+ העלאה<input type="file" accept="image/\*" multiple hidden onchange="uploadPhotos(document.getElementById('phTrip').value, this.files)"></label>` : ''}
       ${D.photosFolderUrl ? `<a class="btn ghost" href="${D.photosFolderUrl}">התיקייה בדרייב</a>` : ''}</div>
     ${!trips.length ? '<div class="empty">צרו טיול קודם, ואז תוכלו להעלות אליו תמונות.</div>' : ''}
     ${trips.map(t => { const ph = D.photos.filter(p => p.tripId === t.id); return ph.length ? `<div class="section"><h3><a href="#" target="_self" onclick="openTrip('${t.id}');return false">${esc(t.name)}</a> <span class="meta">${dateRange(t)} · ${ph.length}</span></h3>${photoGrid(ph)}</div>` : ''; }).join('')}`;
 }
-
-/* ---------- Expenses ---------- */
 function viewExpenses(v) {
   const f = store('expTrip') || '';
   const ex = D.expenses.filter(e => !f || e.tripId === f);
@@ -488,8 +473,6 @@ function viewExpenses(v) {
     <div class="section"><h3>מי חייב למי</h3>${balanceHtml(ex)}</div>
     <div class="section"><h3>כל ההוצאות</h3>${expenseTable(ex, !f)}</div>`;
 }
-
-/* ---------- WhatsApp import ---------- */
 function parseWhatsApp(text) {
   text = text.replace(new RegExp('[' + String.fromCharCode(0x200e, 0x200f, 0x202a) + '-' + String.fromCharCode(0x202e) + ']', 'g'), '');
   const re = /^\[?(\d{1,2})[./](\d{1,2})[./](\d{2,4}),?\s+(\d{1,2}):(\d{2})(?::\d{2})?(?:\s?([AaPp])\.?[Mm]\.?)?\]?\s?(?:-\s)?([^:]{1,40}):\s([\s\S]*)$/;
@@ -555,8 +538,6 @@ function viewImport(v) {
         <div class="txt">${esc(m.text).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1">$1</a>')}</div></div>`).join('') || '<div class="empty">אין הודעות בסינון הזה</div>'}
       ${shown.length > 300 ? '<div class="meta">מוצגות 300 ההודעות האחרונות בסינון</div>' : ''}` : ''}`;
 }
-
-/* ---------- Settings ---------- */
 document.getElementById('settingsBtn').onclick = () => {
   const f = document.getElementById('dlgForm');
   f.innerHTML = `<h3>הגדרות</h3><div class="meta">שמות החברים (שינוי שם מעדכן גם את ההוצאות וההצבעות):</div>
@@ -578,8 +559,6 @@ function fillMe() {
   s.innerHTML = D.members.map(m => `<option ${m === cur ? 'selected' : ''}>${esc(m)}</option>`).join('');
   s.onchange = () => { store('me', s.value); render(); };
 }
-
-/* ---------- Boot ---------- */
 api('getData').then(d => {
   D = d; fillMe(); document.getElementById('loading').remove(); render();
   if (!store('me')) toast('בחרו את השם שלכם למעלה ⬆');
