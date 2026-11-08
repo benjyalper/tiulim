@@ -4,27 +4,65 @@
 <base target="_blank">
 <meta charset="utf-8">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;800&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
   :root {
-    --bg: #f4f2ec; --card: #ffffff; --ink: #1f2a24; --muted: #6b766f; --line: #e1ddd2;
-    --accent: #2f6b4f; --accent-soft: #e3efe8; --warn: #b5562f; --warn-soft: #f7e6dd; --gold: #a07a1c;
-    --radius: 12px;
+    --bg: #f3eee3; --card: #fffdf8; --ink: #23302a; --muted: #6f7a70; --line: #e4dccb;
+    --accent: #2f5d46; --accent-soft: #e2ece4; --forest: #1f3d2f; --warn: #c4622d; --warn-soft: #f7e3d6; --gold: #a07a1c;
+    --sand: #e9dfc8; --radius: 14px;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, "Segoe UI", Arial, sans-serif; }
-  header { position: sticky; top: 0; z-index: 1000; background: var(--accent); color: #fff; padding: 10px 16px; display: flex; align-items: center; gap: 10px; }
-  header h1 { font-size: 18px; margin: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body { margin: 0; color: var(--ink); font: 15px/1.5 "Rubik", system-ui, "Segoe UI", Arial, sans-serif;
+    background-color: var(--bg);
+    background-image: repeating-radial-gradient(circle at 15% 20%, transparent 0 22px, rgba(120,100,60,.06) 22px 23px),
+                      repeating-radial-gradient(circle at 85% 70%, transparent 0 30px, rgba(120,100,60,.05) 30px 31px);
+    background-attachment: fixed; }
+  header { position: sticky; top: 0; z-index: 1000; background: linear-gradient(135deg, var(--forest), var(--accent)); color: #fff; padding: 10px 16px; display: flex; align-items: center; gap: 10px; }
+  header h1 { font-size: 19px; font-weight: 800; letter-spacing: .3px; margin: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   header select { width: auto; max-width: 45%; background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.4); border-radius: 8px; padding: 4px 8px; font: inherit; }
   header select option { color: var(--ink); }
   header button { background: none; border: none; color: #fff; font-size: 20px; cursor: pointer; }
   nav { display: flex; gap: 4px; overflow-x: auto; padding: 8px 12px; background: var(--card); border-bottom: 1px solid var(--line); position: sticky; top: 46px; z-index: 999; }
   nav button { flex: none; border: none; background: none; padding: 8px 12px; border-radius: 999px; font: inherit; color: var(--muted); cursor: pointer; white-space: nowrap; }
-  nav button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  nav button.on { background: var(--accent); color: #fff; font-weight: 600; }
+  .hero { position: relative; border-radius: 18px; overflow: hidden; color: #fff; margin-bottom: 18px;
+    background: linear-gradient(180deg, #f6c98a 0%, #e9956a 38%, #a9573e 70%, #5a3a33 100%); min-height: 210px; }
+  .hero svg { position: absolute; inset: auto 0 0 0; width: 100%; height: 150px; display: block; }
+  .hero .sun { position: absolute; top: 28px; left: 18%; width: 56px; height: 56px; border-radius: 50%; background: #fff3d6; box-shadow: 0 0 40px 12px rgba(255,236,190,.55); }
+  .hero .txt { position: relative; padding: 20px 20px 0; text-shadow: 0 1px 8px rgba(0,0,0,.25); }
+  .hero h2 { margin: 0; font-size: 28px; font-weight: 800; }
+  .hero p { margin: 2px 0 0; opacity: .95; }
+  .hero .stats { position: relative; display: flex; flex-wrap: wrap; gap: 8px; padding: 92px 16px 16px; }
+  .stat { background: rgba(255,253,248,.92); color: var(--forest); border-radius: 12px; padding: 6px 12px; min-width: 74px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+  .stat b { display: block; font-size: 20px; font-weight: 800; line-height: 1.2; }
+  .stat span { font-size: 12px; color: var(--muted); }
+  .blaze { display: inline-flex; flex-direction: column; width: 14px; height: 18px; border-radius: 2px; overflow: hidden; vertical-align: -3px; margin-left: 8px; box-shadow: 0 0 0 1px rgba(0,0,0,.12); }
+  .blaze i { flex: 1; background: #fff; } .blaze i:nth-child(2) { background: #d23a2b; }
+  .blaze.g i:nth-child(2) { background: #2e8b3e; } .blaze.b i:nth-child(2) { background: #2a62c9; }
+  .shead { display: flex; align-items: center; margin: 22px 0 10px; font-size: 18px; font-weight: 700; color: var(--forest); }
+  .shead::after { content: ""; flex: 1; height: 0; border-top: 2px dashed var(--line); margin-right: 12px; }
+  .year { display: inline-block; background: var(--forest); color: #fff; border-radius: 999px; padding: 2px 12px; font-weight: 700; font-size: 13px; margin: 14px 0 8px; }
+  .next { display: flex; gap: 14px; align-items: center; background: var(--card); border: 1px solid var(--line); border-right: 6px solid var(--warn); border-radius: var(--radius); padding: 14px; margin-bottom: 4px; cursor: pointer; }
+  .next .days { text-align: center; min-width: 70px; color: var(--warn); }
+  .next .days b { display: block; font-size: 30px; font-weight: 800; line-height: 1; }
+  .next .days span { font-size: 12px; }
+  .next h3 { margin: 0; font-size: 17px; }
+  .tgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+  .tcard { background: var(--card); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); cursor: pointer; transition: transform .15s, box-shadow .15s; }
+  .tcard:hover { transform: translateY(-3px); box-shadow: 0 8px 22px rgba(60,45,20,.15); }
+  .tcover { position: relative; height: 150px; background: linear-gradient(180deg, #cfe3ea, #e9dcc0) center/cover no-repeat; }
+  .tcover svg { position: absolute; inset: auto 0 0 0; width: 100%; height: 90px; }
+  .tcover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,.6)); }
+  .tcover h3 { position: absolute; z-index: 1; bottom: 8px; right: 12px; left: 12px; margin: 0; color: #fff; font-size: 17px; font-weight: 700; text-shadow: 0 1px 6px rgba(0,0,0,.4); }
+  .tcover .badge { position: absolute; z-index: 1; top: 10px; right: 10px; background: rgba(255,253,248,.92); }
+  .tcover .nights { position: absolute; z-index: 1; top: 10px; left: 10px; background: rgba(31,61,47,.85); color: #fff; font-size: 12px; border-radius: 999px; padding: 1px 9px; }
+  .tbody { padding: 10px 12px 12px; }
+  .tbody .meta { margin: 2px 0; }
   main { max-width: 900px; margin: 0 auto; padding: 16px; padding-bottom: 80px; }
   .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
   .toolbar h2 { margin: 0; font-size: 20px; flex: 1; }
-  .btn { border: 1px solid var(--accent); background: var(--accent); color: #fff; border-radius: 8px; padding: 7px 14px; font: inherit; cursor: pointer; }
+  .btn { border: 1px solid var(--accent); background: var(--accent); color: #fff; border-radius: 999px; padding: 7px 16px; font: inherit; font-weight: 500; cursor: pointer; }
   .btn.ghost { background: transparent; color: var(--accent); }
   .btn.danger { background: transparent; color: var(--warn); border-color: var(--warn); }
   .btn.small { padding: 3px 10px; font-size: 13px; }
@@ -85,7 +123,7 @@
 <body>
 <div id="loading">טוען…</div>
 <header>
-  <h1>🥾 הטיולים שלנו</h1>
+  <h1><svg viewBox="0 0 32 20" width="30" height="19" style="vertical-align:-3px;margin-left:6px" aria-hidden="true"><path d="M0 20 L9 6 L14 13 L20 3 L32 20 Z" fill="#e9dcc0"/><path d="M20 3 L23 8 L21 7 L19 9 L17.5 7.5 Z" fill="#fff"/></svg>הטיולים שלנו</h1>
   <select id="me" title="מי אני"></select>
   <button id="settingsBtn" title="הגדרות">⚙︎</button>
 </header>
@@ -274,23 +312,68 @@ function render() {
 }
 function go(k) { tab = k; currentTrip = null; phSel = null; render(); window.scrollTo(0, 0); }
 
+const RIDGES = `<svg viewBox="0 0 1200 160" preserveAspectRatio="none" aria-hidden="true">
+  <path d="M0 160 L0 70 L120 30 L230 85 L340 40 L470 95 L600 25 L720 80 L840 45 L960 90 L1080 35 L1200 75 L1200 160 Z" fill="#7d5a4a" opacity=".55"/>
+  <path d="M0 160 L0 100 L150 60 L260 110 L400 70 L520 120 L650 65 L780 115 L900 75 L1030 120 L1200 85 L1200 160 Z" fill="#4b6b55" opacity=".85"/>
+  <path d="M0 160 L0 130 L180 100 L320 140 L480 105 L640 145 L800 110 L960 140 L1100 115 L1200 135 L1200 160 Z" fill="#1f3d2f"/></svg>`;
+const blaze = (c = '') => `<span class="blaze ${c}"><i></i><i></i><i></i></span>`;
+function tripDays(t) {
+  if (!t.startDate) return 0;
+  const a = new Date(t.startDate + 'T12:00:00'), b = new Date((t.endDate || t.startDate) + 'T12:00:00');
+  return Math.round((b - a) / 864e5) + 1;
+}
+function coverPhoto(t) {
+  const ph = D.photos.filter(p => p.tripId === t.id);
+  return ph.find(p => !/מפ|אופציות|רשימ|תפריט|ציוד/.test(p.caption || '')) || null;
+}
 function tripCard(t) {
   const trail = byId(D.trails, t.trailId);
   const spent = D.expenses.filter(e => e.tripId === t.id).reduce((a, e) => a + (parseFloat(e.amount) || 0), 0);
   const nPh = D.photos.filter(p => p.tripId === t.id).length;
-  return `<div class="card click" onclick="openTrip('${t.id}')"><div class="row"><h3>${esc(t.name)}</h3><span class="spacer"></span><span class="badge ${t.status}">${STATUS[t.status] || ''}</span></div>
-    <div class="meta">📅 ${dateRange(t)}${t.location ? ' · 📍 ' + esc(t.location) : ''}</div>
-    ${trail ? `<div class="meta">🥾 ${esc(trail.name)}${trail.lengthKm ? ` · ${esc(trail.lengthKm)} ק״מ` : ''}</div>` : ''}
-    <div class="meta">${spent ? '💰 ' + money(spent) + ' · ' : ''}${nPh ? '📷 ' + nPh : ''}</div></div>`;
+  const cover = coverPhoto(t), days = tripDays(t);
+  return `<div class="tcard" onclick="openTrip('${t.id}')">
+    <div class="tcover" ${cover ? `style="background-image:url('${thumb(cover.fileId, 800)}')"` : ''}>${cover ? '' : RIDGES}
+      <span class="badge ${t.status}">${STATUS[t.status] || ''}</span>
+      ${days > 1 ? `<span class="nights">🌙 ${days - 1} ${days - 1 === 1 ? 'לילה' : 'לילות'}</span>` : ''}
+      <h3>${esc(t.name)}</h3></div>
+    <div class="tbody">
+      <div class="meta">📅 ${dateRange(t)}</div>
+      ${trail ? `<div class="meta">🥾 ${esc(trail.name)}${trail.lengthKm ? ` · ${esc(trail.lengthKm)} ק״מ` : ''}</div>` : ''}
+      ${spent || nPh ? `<div class="meta">${spent ? '💰 ' + money(spent) : ''}${spent && nPh ? ' · ' : ''}${nPh ? '📷 ' + nPh : ''}</div>` : ''}
+    </div></div>`;
 }
 function viewTrips(v) {
   const t0 = today();
   const up = D.trips.filter(t => t.status !== 'done' && (!t.startDate || (t.endDate || t.startDate) >= t0)).sort((a, z) => (a.startDate || '9').localeCompare(z.startDate || '9'));
   const past = D.trips.filter(t => !up.includes(t)).sort((a, z) => (z.startDate || '').localeCompare(a.startDate || ''));
-  v.innerHTML = `<div class="toolbar"><h2>טיולים</h2><button class="btn" onclick="addTrip()">+ טיול חדש</button></div>
+  const done = D.trips.filter(t => t.status === 'done' && t.startDate);
+  const km = Math.round(done.reduce((a, t) => a + (parseFloat(byId(D.trails, t.trailId)?.lengthKm) || 0), 0));
+  const nights = done.reduce((a, t) => a + Math.max(0, tripDays(t) - 1), 0);
+  const first = done.map(t => t.startDate).sort()[0];
+  const years = first ? new Date().getFullYear() - +first.slice(0, 4) : 0;
+  const next = up.find(t => t.startDate);
+  const idea = up.find(t => !t.startDate);
+  const daysTo = next ? Math.max(0, Math.round((new Date(next.startDate + 'T12:00:00') - new Date(t0 + 'T12:00:00')) / 864e5)) : 0;
+  const byYear = {};
+  past.forEach(t => { const y = (t.startDate || '').slice(0, 4) || 'בלי תאריך'; (byYear[y] = byYear[y] || []).push(t); });
+  v.innerHTML = `<div class="hero"><div class="sun"></div>${RIDGES}
+      <div class="txt"><h2>הטיולים שלנו</h2><p>${first ? `מזדקנים בשטח מאז ${first.slice(0, 4)}` : 'מזדקנים בשטח'} · ${D.members.map(esc).join(', ')}</p></div>
+      <div class="stats">
+        <div class="stat"><b>${done.length}</b><span>טיולים</span></div>
+        ${km ? `<div class="stat"><b>${km}</b><span>ק״מ בשבילים</span></div>` : ''}
+        ${nights ? `<div class="stat"><b>${nights}</b><span>לילות בשטח</span></div>` : ''}
+        ${D.photos.length ? `<div class="stat"><b>${D.photos.length}</b><span>תמונות</span></div>` : ''}
+        ${years ? `<div class="stat"><b>${years}</b><span>שנים ביחד</span></div>` : ''}
+      </div></div>
+    ${next ? `<div class="next" onclick="openTrip('${next.id}')"><div class="days"><b>${daysTo}</b><span>${daysTo === 1 ? 'יום' : 'ימים'}</span></div>
+        <div><div class="meta">הטיול הבא</div><h3>${esc(next.name)}</h3><div class="meta">📅 ${dateRange(next)}${next.location ? ' · 📍 ' + esc(next.location) : ''}</div></div></div>`
+      : idea ? `<div class="next" onclick="openTrip('${idea.id}')"><div class="days"><b>?</b><span>מתי?</span></div>
+        <div><div class="meta">הטיול הבא</div><h3>${esc(idea.name)}</h3><div class="meta">עוד אין תאריך – פתחו והוסיפו תאריכים להצבעה 🗳️</div></div></div>` : ''}
+    <div class="toolbar" style="margin-top:14px"><span class="spacer"></span><button class="btn" onclick="addTrip()">+ טיול חדש</button></div>
     ${!D.trips.length ? '<div class="empty">עוד אין טיולים. התחילו ב״טיול חדש״ או ייבאו מהוואטסאפ.</div>' : ''}
-    ${up.length ? `<div class="section"><h3>בקרוב ורעיונות</h3><div class="grid">${up.map(tripCard).join('')}</div></div>` : ''}
-    ${past.length ? `<div class="section"><h3>טיולים שעשינו</h3><div class="grid">${past.map(tripCard).join('')}</div></div>` : ''}`;
+    ${up.length ? `<div class="shead">${blaze('b')}בקרוב ורעיונות</div><div class="tgrid">${up.map(tripCard).join('')}</div>` : ''}
+    ${past.length ? `<div class="shead">${blaze()}טיולים שעשינו</div>
+      ${Object.keys(byYear).sort().reverse().map(y => `<div class="year">${y}</div><div class="tgrid">${byYear[y].map(tripCard).join('')}</div>`).join('')}` : ''}`;
 }
 function openTrip(id) { currentTrip = id; tab = 'trips'; phSel = null; render(); window.scrollTo(0, 0); }
 
