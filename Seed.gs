@@ -148,7 +148,9 @@ const WA_PHOTOS = [
 
 function seedPhoto_(tripId, file, caption, by) {
   try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (err) {}
-  saveRecord('Photos', { tripId: tripId, fileId: file.getId(), caption: caption || '', takenBy: by || '' });
+  let hash = '';
+  try { hash = sha256_(file.getBlob().getBytes()); } catch (err) {}
+  saveRecord('Photos', { tripId: tripId, fileId: file.getId(), caption: caption || '', takenBy: by || '', hash: hash });
 }
 
 function importWhatsAppData() {

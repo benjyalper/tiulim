@@ -8,7 +8,7 @@ const TABLES = {
   Trips:       ['id', 'name', 'status', 'startDate', 'endDate', 'trailId', 'location', 'lat', 'lng', 'notes', 'createdBy', 'createdAt'],
   Trails:      ['id', 'name', 'region', 'lengthKm', 'difficulty', 'durationHrs', 'lat', 'lng', 'mapUrl', 'gpxFileId', 'notes', 'createdBy', 'createdAt'],
   Expenses:    ['id', 'tripId', 'date', 'description', 'amount', 'payer', 'splitWith', 'createdBy', 'createdAt'],
-  Photos:      ['id', 'tripId', 'fileId', 'caption', 'takenBy', 'createdAt'],
+  Photos:      ['id', 'tripId', 'fileId', 'caption', 'takenBy', 'createdAt', 'hash'],
   DateOptions: ['id', 'tripId', 'date', 'votes', 'createdAt'],
   Members:     ['name'],
 };
@@ -41,7 +41,15 @@ function ss_() { return SpreadsheetApp.getActiveSpreadsheet(); }
 function ensureSetup_() {
   const ss = ss_();
   Object.keys(TABLES).forEach(function (name) {
-    if (ss.getSheetByName(name)) return;
+    const existing = ss.getSheetByName(name);
+    if (existing) {
+      // Add any column that newer versions of the app need (e.g. Photos.hash).
+      const have = existing.getRange(1, 1, 1, Math.max(existing.getLastColumn(), 1)).getValues()[0];
+      TABLES[name].forEach(function (h, i) {
+        if (have.indexOf(h) < 0) existing.getRange(1, i + 1).setValue(h).setFontWeight('bold');
+      });
+      return;
+    }
     const sh = ss.insertSheet(name);
     const head = TABLES[name];
     sh.getRange('A:Z').setNumberFormat('@'); // keep everything as plain text
@@ -216,14 +224,48 @@ function renameMember(oldName, newName) {
   });
 }
 
-/** dataUrl: "data:image/jpeg;base64,...." (already resized by the page) */
-function uploadPhoto(tripId, dataUrl, filename, caption, member) {
+/** SHA-256 of a file's bytes, as hex – used to spot the same photo uploaded twice. */
+function sha256_(bytes) {
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, bytes)
+    .map(function (b) { return ('0' + (b & 255).toString(16)).slice(-2); }).join('');
+}
+
+/** Returns the name of the trip that already has a photo with this fingerprint, or ''. */
+function photoExists(hash) {
+  if (!hash) return '';
+  const hit = readTable_('Photos').filter(function (p) { return p.hash === hash; })[0];
+  if (!hit) return '';
+  const trip = readTable_('Trips').filter(function (t) { return t.id === hit.tripId; })[0];
+  return trip ? trip.name : '?';
+}
+
+/** Run once from the editor: fingerprints photos added before duplicate-checking existed. Safe to re-run. */
+function fillPhotoHashes() {
+  ensureSetup_();
+  const start = Date.now(), sh = sheet_('Photos'), vals = sh.getDataRange().getValues(), head = vals[0];
+  const cF = head.indexOf('fileId'), cH = head.indexOf('hash');
+  let done = 0, left = 0, failed = 0;
+  for (let i = 1; i < vals.length; i++) {
+    if (!vals[i][0] || vals[i][cH]) continue;
+    if (Date.now() - start > 270000) { left++; continue; }
+    try { sh.getRange(i + 1, cH + 1).setValue(sha256_(DriveApp.getFileById(vals[i][cF]).getBlob().getBytes())); done++; }
+    catch (e) { failed++; }
+  }
+  Logger.log('Fingerprinted ' + done + ' photos' + (failed ? ', ' + failed + ' could not be read' : '') + (left ? ', ' + left + ' left – run again' : '.'));
+}
+
+/** dataUrl: "data:image/jpeg;base64,...." (already resized by the page); hash: SHA-256 of the original file */
+function uploadPhoto(tripId, dataUrl, filename, caption, member, hash) {
+  if (hash) {
+    const where = photoExists(hash);
+    if (where) return { duplicate: true, trip: where };
+  }
   const m = String(dataUrl).match(/^data:([^;]+);base64,(.*)$/);
   if (!m) throw new Error('Bad image data');
   const blob = Utilities.newBlob(Utilities.base64Decode(m[2]), m[1], filename || 'photo.jpg');
   const file = folder_(PHOTOS_FOLDER).createFile(blob);
   try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (e) {}
-  return saveRecord('Photos', { tripId: tripId, fileId: file.getId(), caption: caption || '', takenBy: member || '' });
+  return saveRecord('Photos', { tripId: tripId, fileId: file.getId(), caption: caption || '', takenBy: member || '', hash: hash || '' });
 }
 
 function uploadGpx(trailId, text, filename) {
