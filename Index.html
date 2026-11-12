@@ -59,6 +59,37 @@
   .tcover .nights { position: absolute; z-index: 1; top: 10px; left: 10px; background: rgba(31,61,47,.85); color: #fff; font-size: 12px; border-radius: 999px; padding: 1px 9px; }
   .tbody { padding: 10px 12px 12px; }
   .tbody .meta { margin: 2px 0; }
+  .mcard { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; margin-bottom: 14px; }
+  .mcard h3 { margin: 0 0 10px; font-size: 16px; color: var(--forest); }
+  .addx { border-top: 5px solid var(--accent); }
+  .xrow { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .xrow > * { flex: 1 1 140px; }
+  .xamount { font-size: 20px; font-weight: 700; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 12px; }
+  .chips label { margin: 0; display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink); cursor: pointer; background: #fff; }
+  .chips label:has(input:checked) { background: var(--accent-soft); border-color: var(--accent); color: var(--forest); font-weight: 600; }
+  .chips input { display: none; }
+  .mstats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .mstat { background: var(--forest); color: #fff; border-radius: var(--radius); padding: 10px 12px; }
+  .mstat b { display: block; font-size: 22px; font-weight: 800; }
+  .mstat span { font-size: 12px; opacity: .85; }
+  .person { display: grid; grid-template-columns: 70px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px dashed var(--line); }
+  .person:last-child { border-bottom: none; }
+  .person .nm { font-weight: 700; }
+  .person .sub { font-size: 12px; color: var(--muted); }
+  .bar { position: relative; height: 10px; background: #efe9dc; border-radius: 999px; overflow: hidden; margin-top: 4px; }
+  .bar i { position: absolute; top: 0; bottom: 0; border-radius: 999px; }
+  .bar i.pos { background: #3f8f5a; right: 50%; } .bar i.neg { background: var(--warn); left: 50%; }
+  .bar::after { content: ""; position: absolute; top: -2px; bottom: -2px; right: 50%; width: 2px; background: #b9ad94; }
+  .bal { font-weight: 800; white-space: nowrap; } .bal.pos { color: #2f7a4a; } .bal.neg { color: var(--warn); }
+  .xfer { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: #fff7ef; border: 1px solid #f0d9c4; margin-bottom: 8px; flex-wrap: wrap; }
+  .xfer .arrow { color: var(--warn); font-weight: 800; }
+  .xfer .amt { font-size: 18px; font-weight: 800; color: var(--warn); }
+  .settled { text-align: center; padding: 14px; color: #2f7a4a; font-weight: 700; }
+  .xlist .trip-h { font-weight: 700; color: var(--forest); margin: 14px 0 6px; display: flex; justify-content: space-between; }
+  .xitem { display: flex; gap: 10px; align-items: center; padding: 8px 10px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 6px; }
+  .xitem .who { min-width: 56px; font-weight: 700; } .xitem .what { flex: 1; } .xitem .what .meta { font-size: 12px; }
+  .xitem.transfer { background: #f1f6f2; border-style: dashed; }
   main { max-width: 900px; margin: 0 auto; padding: 16px; padding-bottom: 80px; }
   .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
   .toolbar h2 { margin: 0; font-size: 20px; flex: 1; }
@@ -137,7 +168,7 @@ let D = { members: [], trips: [], trails: [], expenses: [], photos: [], dateOpti
 let tab = 'trips', currentTrip = null, waMessages = [], waFilter = 'useful', phSel = null, phTripSel = '';
 const STATUS = { idea: 'רעיון', planned: 'מתוכנן', done: 'בוצע' };
 const DIFF = { easy: 'קל', medium: 'בינוני', hard: 'קשה' };
-const TABS = [['trips','טיולים'],['schedule','לו״ז'],['trails','מסלולים'],['map','מפה'],['photos','תמונות'],['expenses','הוצאות'],['import','ייבוא מוואטסאפ']];
+const TABS = [['trips','טיולים'],['schedule','לו״ז'],['trails','מסלולים'],['map','מפה'],['photos','תמונות'],['expenses','קופה'],['import','ייבוא מוואטסאפ']];
 
 function api(fn, ...args) {
   return new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...args));
@@ -171,6 +202,12 @@ async function coordsFrom(s) {
   let c = parseCoords(s);
   if (!c && /^https?:[\/][\/]/.test(s.trim())) { try { c = parseCoords(await api('resolveLink', s.trim())); } catch (e) {} }
   return c;
+}
+const isTransfer = e => /^💸/.test(e.description || '');
+function people() {
+  const set = new Set(D.members);
+  D.expenses.forEach(e => { if (e.payer) set.add(e.payer); list(e.splitWith).forEach(m => m && set.add(m)); });
+  return [...set];
 }
 function balances(expenses) {
   const b = {}; D.members.forEach(m => b[m] = 0);
@@ -239,7 +276,7 @@ const FIELDS = {
     { k: 'tripId', l: 'טיול', type: 'select', opts: () => [['', '— כללי —'], ...D.trips.map(t => [t.id, t.name])] },
     { k: 'description', l: 'על מה', req: 1 },
     { k: 'amount', l: 'סכום (₪)', type: 'number', req: 1 },
-    { k: 'payer', l: 'מי שילם', type: 'select', opts: () => D.members.map(m => [m, m]) },
+    { k: 'payer', l: 'מי שילם', type: 'select', opts: () => people().map(m => [m, m]) },
     { k: 'splitWith', l: 'מתחלק בין', type: 'members' },
     { k: 'date', l: 'תאריך', type: 'date' },
   ],
@@ -255,7 +292,7 @@ function openForm(table, rec, title, onSaved) {
     if (fd.type === 'select') return `<label for="${id}">${fd.l}</label><select id="${id}">${fd.opts().map(([val, txt]) => `<option value="${esc(val)}" ${String(val) === String(v) ? 'selected' : ''}>${esc(txt)}</option>`).join('')}</select>`;
     if (fd.type === 'textarea') return `<label for="${id}">${fd.l}</label><textarea id="${id}">${esc(v)}</textarea>`;
     if (fd.type === 'members') { const sel = list(v).length ? list(v) : D.members;
-      return `<label>${fd.l}</label><div class="row">${D.members.map(m => `<label style="margin:0;color:var(--ink)"><input type="checkbox" name="split" value="${esc(m)}" ${sel.includes(m) ? 'checked' : ''}> ${esc(m)}</label>`).join('')}</div>`; }
+      return `<label>${fd.l}</label><div class="row">${[...new Set([...people(), ...sel])].map(m => `<label style="margin:0;color:var(--ink)"><input type="checkbox" name="split" value="${esc(m)}" ${sel.includes(m) ? 'checked' : ''}> ${esc(m)}</label>`).join('')}</div>`; }
     if (fd.type === 'coords') { const c = rec.lat && rec.lng ? `${rec.lat}, ${rec.lng}` : '';
       return `<label for="${id}">${fd.l}</label><input id="${id}" value="${esc(c)}" placeholder="https:\/\/maps.app.goo.gl/… או 31.77, 35.21"><div id="minimap" class="minimap"></div>`; }
     return `<label for="${id}">${fd.l}</label><input id="${id}" type="${fd.type || 'text'}" ${fd.type === 'number' ? 'step="any"' : ''} value="${esc(v)}" ${fd.req ? 'required' : ''}>`;
@@ -634,14 +671,90 @@ function viewPhotos(v) {
     ${trips.map(t => { const ph = D.photos.filter(p => p.tripId === t.id); return ph.length ? `<div class="section ph-sec" id="ph-${t.id}"><h3><a href="#" target="_self" onclick="openTrip('${t.id}');return false">${esc(t.name)}</a> <span class="meta">${dateRange(t)} · ${ph.length}</span></h3>${photoGrid(ph)}</div>` : ''; }).join('')}
     ${moveBar()}`;
 }
+let xGuests = [];
 function viewExpenses(v) {
+  const trips = D.trips.slice().sort((a, z) => (z.startDate || '').localeCompare(a.startDate || ''));
   const f = store('expTrip') || '';
   const ex = D.expenses.filter(e => !f || e.tripId === f);
-  v.innerHTML = `<div class="toolbar"><h2>הוצאות</h2>
-      <select style="width:auto" onchange="store('expTrip', this.value); render()"><option value="">כל הטיולים</option>${D.trips.map(t => `<option value="${t.id}" ${t.id === f ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select>
-      <button class="btn" onclick="addExpense({tripId:'${f}'})">+ הוצאה</button></div>
-    <div class="section"><h3>מי חייב למי</h3>${balanceHtml(ex)}</div>
-    <div class="section"><h3>כל ההוצאות</h3>${expenseTable(ex, !f)}</div>`;
+  const real = ex.filter(e => !isTransfer(e));
+  const ppl = [...new Set([...people(), ...xGuests])];
+  const total = real.reduce((a, e) => a + (parseFloat(e.amount) || 0), 0);
+  const paid = {}, share = {};
+  real.forEach(e => {
+    const amt = parseFloat(e.amount) || 0; if (!amt) return;
+    let among = list(e.splitWith).filter(m => m); if (!among.length) among = D.members;
+    paid[e.payer] = (paid[e.payer] || 0) + amt;
+    among.forEach(m => share[m] = (share[m] || 0) + amt / among.length);
+  });
+  const b = balances(ex), moves = settle(b);
+  const involved = Object.keys(b).filter(m => Math.abs(b[m]) > 0.01 || paid[m] || share[m]);
+  const maxAbs = Math.max(1, ...Object.values(b).map(Math.abs));
+  const defTrip = f || (trips.find(t => t.status !== 'idea') || trips[0] || {}).id || '';
+  const byTrip = {};
+  ex.slice().sort((a, z) => (z.date || '').localeCompare(a.date || '')).forEach(e => (byTrip[e.tripId || ''] = byTrip[e.tripId || ''] || []).push(e));
+  v.innerHTML = `<div class="toolbar"><h2>💰 קופה</h2>
+      <select style="width:auto" onchange="store('expTrip', this.value); render()"><option value="">כל הטיולים</option>${tripOptions(f)}</select></div>
+    <div class="mcard addx"><h3>הוספת הוצאה</h3>
+      <div class="xrow">
+        <select id="xPayer" onchange="document.getElementById('xOther').hidden = this.value !== '__other'">
+          ${ppl.map(m => `<option ${m === me() ? 'selected' : ''}>${esc(m)}</option>`).join('')}<option value="__other">מישהו אחר…</option></select>
+        <input id="xOther" placeholder="השם שלו/ה" hidden>
+        <input id="xAmount" class="xamount" type="number" inputmode="decimal" step="any" min="0" placeholder="₪ כמה?">
+      </div>
+      <div class="xrow"><input id="xDesc" placeholder="על מה? (דלק, אוכל, ג׳יפ…)"></div>
+      <div class="xrow"><select id="xTrip"><option value="">— בלי טיול —</option>${tripOptions(defTrip)}</select>
+        <input id="xDate" type="date" value="${today()}"></div>
+      <div class="meta">מתחלק בין:</div>
+      <div class="chips">${ppl.map(m => `<label><input type="checkbox" name="xSplit" value="${esc(m)}" ${D.members.includes(m) ? 'checked' : ''}>${esc(m)}</label>`).join('')}</div>
+      <button type="button" class="btn" onclick="quickAdd()">+ הוספה</button>
+    </div>
+    <div class="mstats">
+      <div class="mstat"><b>${money(total)}</b><span>סה״כ הוצאות${f ? '' : ' (כל הטיולים)'}</span></div>
+      <div class="mstat"><b>${real.length}</b><span>הוצאות</span></div>
+      ${involved.length ? `<div class="mstat"><b>${money(total / Math.max(1, Object.keys(share).length))}</b><span>ממוצע לאדם</span></div>` : ''}
+    </div>
+    <div class="mcard"><h3>מי חייב למי</h3>
+      ${moves.length ? moves.map(t => `<div class="xfer"><b>${esc(t.from)}</b><span class="arrow">← מעביר/ה ל־</span><b>${esc(t.to)}</b>
+          <span class="spacer"></span><span class="amt">${money(t.amount)}</span>
+          <button type="button" class="btn small" onclick="markPaid(${esc(JSON.stringify(t.from))}, ${esc(JSON.stringify(t.to))}, ${Math.round(t.amount * 100) / 100})">✓ שולם</button></div>`).join('')
+        : `<div class="settled">${real.length ? 'כולם מאוזנים 👌' : 'עוד אין הוצאות'}</div>`}
+    </div>
+    ${involved.length ? `<div class="mcard"><h3>לפי אנשים</h3>
+      ${involved.map(m => `<div class="person"><div class="nm">${esc(m)}</div>
+          <div><div class="sub">שילם ${money(paid[m] || 0)} · החלק שלו/ה ${money(share[m] || 0)}</div>
+            <div class="bar"><i class="${b[m] >= 0 ? 'pos' : 'neg'}" style="width:${Math.min(50, Math.abs(b[m]) / maxAbs * 50)}%"></i></div></div>
+          <div class="bal ${b[m] > 0.01 ? 'pos' : b[m] < -0.01 ? 'neg' : ''}">${b[m] > 0.01 ? 'מקבל/ת ' : b[m] < -0.01 ? 'חייב/ת ' : ''}${money(Math.abs(b[m]))}</div></div>`).join('')}
+    </div>` : ''}
+    <div class="xlist"><div class="shead">${blaze('g')}כל ההוצאות</div>
+      ${!ex.length ? '<div class="empty">אין הוצאות עדיין</div>' : ''}
+      ${Object.keys(byTrip).map(tid => { const t = byId(D.trips, tid); const items = byTrip[tid];
+        const sum = items.filter(e => !isTransfer(e)).reduce((a, e) => a + (parseFloat(e.amount) || 0), 0);
+        return `${f ? '' : `<div class="trip-h"><span>${t ? esc(t.name) : 'כללי'}</span><span>${money(sum)}</span></div>`}
+        ${items.map(e => { const sw = list(e.splitWith).filter(x => x);
+          return `<div class="xitem ${isTransfer(e) ? 'transfer' : ''}"><div class="who">${esc(e.payer)}</div>
+            <div class="what">${esc(e.description)}<div class="meta">${fmtDate(e.date)}${sw.length && sw.length !== D.members.length ? ' · בין: ' + sw.map(esc).join(', ') : ''}</div></div>
+            <b class="num">${money(parseFloat(e.amount) || 0)}</b>
+            <button type="button" class="btn ghost small" onclick="editExpense('${e.id}')">✎</button></div>`; }).join('')}`; }).join('')}
+    </div>`;
+}
+async function quickAdd() {
+  const sel = document.getElementById('xPayer').value;
+  const payer = (sel === '__other' ? document.getElementById('xOther').value : sel).trim();
+  const amount = parseFloat(document.getElementById('xAmount').value);
+  if (!payer) return toast('מי שילם?');
+  if (!(amount > 0)) return toast('כמה שילמו?');
+  let split = [...document.querySelectorAll('input[name=xSplit]:checked')].map(i => i.value);
+  if (sel === '__other' && !split.includes(payer)) { xGuests.push(payer); }
+  if (!split.length) return toast('בחרו בין מי מתחלקים');
+  const rec = { payer, amount: String(Math.round(amount * 100) / 100), description: document.getElementById('xDesc').value.trim() || 'הוצאה',
+    tripId: document.getElementById('xTrip').value, date: document.getElementById('xDate').value || today(), splitWith: split, createdBy: me() };
+  await act(api('saveRecord', 'Expenses', rec), `נוסף: ${payer} שילם ${money(amount)} ✓`);
+}
+async function markPaid(from, to, amount) {
+  if (!confirm(`לסמן ש${from} העביר/ה ל${to} ${money(amount)}?`)) return;
+  const f = store('expTrip') || '';
+  await act(api('saveRecord', 'Expenses', { payer: from, amount: String(amount), description: `💸 ${from} העביר/ה ל${to}`,
+    tripId: f, date: today(), splitWith: [to], createdBy: me() }), 'נרשם ✓');
 }
 function parseWhatsApp(text) {
   text = text.replace(new RegExp('[' + String.fromCharCode(0x200e, 0x200f, 0x202a) + '-' + String.fromCharCode(0x202e) + ']', 'g'), '');
